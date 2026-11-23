@@ -202,6 +202,7 @@ body.no-combo #combo{display:none}
 #feed{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
 #feed div{font:700 17px var(--display);color:var(--amber);white-space:nowrap;-webkit-text-stroke:1px rgba(0,0,0,.5);text-shadow:0 0 12px rgba(255,181,58,.9),0 0 30px rgba(255,63,180,.6);animation:feed 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
 #feed div.blue{color:#8fc9ff;text-shadow:0 0 12px #4fa8ff,0 0 26px #4fa8ff}
+#feed div.accel{color:#ffb070;font-size:22px;text-shadow:0 0 12px #ff7a2a,0 0 30px #ffd23a}
 #feed div.gold{color:#ffe066;font-size:26px;text-shadow:0 0 14px #ffd23a,0 0 40px #ff3fb4}
 @keyframes feed{0%{opacity:0;transform:scale(1.5) rotate(-3deg)}18%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-30px) scale(.9)}}
 @media (prefers-reduced-motion:reduce){#feed div,#spin b,#spin em,#score.bump,#flash.go{animation:none}}
@@ -893,10 +894,12 @@ function goldPickup() {
   if (!feat('gold')) return;
   spinMul *= SPIN_BOOST;
   if (flip) flip.rate *= SPIN_BOOST;                      // a jump already in the air speeds up too
+  accelMul *= 1.1;
   const d = document.createElement('div'); d.className = 'gold'; d.textContent = '回転スピードUP ×' + spinMul.toFixed(2);
-  $('feed').appendChild(d); setTimeout(() => d.remove(), 1400);
+  const d2 = document.createElement('div'); d2.className = 'accel'; d2.textContent = '加速力UP ×' + accelMul.toFixed(2);
+  $('feed').appendChild(d); $('feed').appendChild(d2); setTimeout(() => d.remove(), 1400); setTimeout(() => d2.remove(), 1600);
   burst(pos, 50, 10); shakeT = Math.max(shakeT, 0.12); flashScreen('rgba(255,210,58,.22)');
-  accelMul *= 1.1; showMul(); comboHit(); stats.golds++;
+  showMul(); comboHit(); stats.golds++;
 }
 function spinTick(n) {
   const el = $('spin'); el.hidden = false; el.classList.remove('win', 'fail');
