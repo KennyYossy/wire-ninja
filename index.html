@@ -89,6 +89,21 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 .btns .go{margin-top:0}
 .ghost{font:700 15px var(--body);color:var(--ink);background:transparent;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:12px 26px}
 .ghost:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+#tut{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 96px);transform:translateX(-50%);width:min(380px,calc(100% - 32px));
+  background:rgba(10,6,24,.82);border:1px solid rgba(53,242,255,.45);border-radius:14px;padding:10px 12px 10px;box-shadow:0 0 20px rgba(53,242,255,.25);z-index:5}
+#tut .top{display:flex;align-items:baseline;gap:8px}
+#tut .no{font:700 12px var(--display);color:var(--cyan);letter-spacing:.12em}
+#tut h3{margin:0;font:700 17px var(--body);color:#fff;flex:1}
+#tut p{margin:4px 0 0;font:500 13px/1.5 var(--body);color:var(--ink)}
+#tut p b{color:var(--amber)}
+#tut .bar{height:5px;margin-top:7px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden}
+#tut .bar u{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--magenta));transition:width .15s}
+#tut .row{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
+#tut button{font:700 12px var(--body);color:var(--ink);background:transparent;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:6px 12px}
+#tut.ok{border-color:var(--amber);box-shadow:0 0 28px rgba(255,181,58,.6)}
+#tut.ok h3::after{content:'  クリア！';color:var(--amber)}
+body.tutorial #feed{top:calc(env(safe-area-inset-top,0px) + 250px)}
+#tutDone .list{font:500 14px/1.7 var(--body);color:var(--ink);text-align:left}
 #flash{position:fixed;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen}
 #flash.go{animation:flash .35s ease-out}
 @keyframes flash{0%{opacity:.75}100%{opacity:0}}
@@ -230,10 +245,24 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
     </div>
     <p class="tip">振り子の<em>一番下を少し過ぎたところ</em>で離すと大きく前へ飛ぶ。粘りすぎるとビルに激突、早すぎると失速。刺したまま<em>指を上にスライド</em>すると巻き取って、振りが小さく速くなる。地面かビルに当たったら配達失敗。</p>
     <p class="pts">1m = 10pt ／ 青アイテム 1000pt ／ 金アイテムは取るたび回転スピード×1.2・加速×1.1 ／ ボーナスはコンボ数×5%上乗せ（青アイテムでコンボ上限+5・時間+1秒） ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 100→200→300→500→800→1300…（GOOD→COOL→…→UNBELIEVABLE）／ ビルの間を両側すれすれ Wスレスレ 1000pt ／ 地面すれすれ（高さ4m未満）1500pt／ 進む向きが180°逆になったらバックフリップ 1000pt ／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
-    <button class="go" id="start" type="button">スタート</button>
+    <div class="btns"><button class="go" id="start" type="button">スタート</button><button class="ghost" id="tutStart" type="button">チュートリアル</button></div>
   </div>
 </div>
 
+<div id="tut" hidden>
+  <div class="top"><span class="no" id="tutNo">1/12</span><h3 id="tutT"></h3></div>
+  <p id="tutD"></p>
+  <div class="bar"><u id="tutBar"></u></div>
+  <div class="row"><button id="tutSkip" type="button">スキップ ▶</button><button id="tutQuit" type="button">やめる</button></div>
+</div>
+<div class="overlay" id="tutDone" hidden>
+  <div class="card">
+    <p class="sub">TUTORIAL</p>
+    <h1 class="logo" style="font-size:40px">COMPLETE!</h1>
+    <p class="tip">これで操作はぜんぶ覚えました。本番では地面やビルにぶつかると配達失敗です。</p>
+    <div class="btns"><button class="go" id="tutGo" type="button">本番スタート</button><button class="ghost" id="tutTitle" type="button">タイトルへ</button></div>
+  </div>
+</div>
 <div class="overlay" id="over" hidden>
   <div class="card result">
     <p class="why" id="why">ビルに激突</p>
@@ -415,7 +444,7 @@ function pickItems() {
   for (const a of activeItems) {
     if (!a.g.visible) continue;
     if (a.g.position.distanceToSquared(pos) < 56) {
-      a.g.visible = false; collected.add(a.it.key);
+      a.g.visible = false; collected.add(a.it.key); tutEvent('item', { kind: a.it.kind });
       if (a.it.kind === 'blue') {
         bonus(1000, 'アイテム'); stats.blues++; comboMax += 5; comboTime += 1; comboT = comboTime;
         const d = document.createElement('div'); d.className = 'blue'; d.textContent = '最大COMBO数＆継続時間↑（' + comboMax + ' / ' + comboTime + '秒）';
@@ -481,6 +510,7 @@ function fireJet(dir) {
   if (onRoof && dir === 'up') onRoof = null;
   jetCD = JET_CD; jetT = 0.5; shakeT = Math.max(shakeT, 0.12);
   jetEmit(45); flashScreen('rgba(255,255,255,.15)');
+  tutEvent('jet');
 }
 function updateJet(dt, now, paused) {
   if (state === 'play' && !paused) jetCD = Math.max(0, jetCD - dt);
@@ -583,6 +613,7 @@ function attach(side) {
   const lat = (a.x - pos.x) * rightV.x + (a.z - pos.z) * rightV.z;
   r.pivot.copy(a).addScaledVector(rightV, -lat * (1 - P.SIDE));
   r.len = pos.distanceTo(r.pivot); r.len0 = r.len; r.on = true; r.mesh.visible = true; r.reelReq = 0;
+  tutEvent('attach', { side });
   endFlip();
   return true;
 }
@@ -590,7 +621,7 @@ function detach(side) {
   const r = ropes[side]; if (!r.on) return;
   r.on = false; r.mesh.visible = false;
   if (!ropes.L.on && !ropes.R.on) {
-    const sp = vel.length();
+    const sp = vel.length(); tutEvent('release', { sp });
     if (vel.y >= 16 && !onRoof) flip = { t: 0, ang: 0, rate: Math.PI * 2 * Math.min(1.0, 0.4 + (vel.y - 16) * 0.03) * spinMul };
   }
 }
@@ -652,7 +683,7 @@ function bonus(pts, label, gold) {
   const rate = 1 + combo * 0.05;                         // combo bonus: +5% per current combo
   const total = Math.round(pts * rate);
   score += total;
-  const cat = /回転ジャンプ$/.test(label) ? '回転ジャンプ' : label;
+  const cat = /回転ジャンプ$/.test(label) ? '回転ジャンプ' : label; tutEvent('bonus', { label: cat });
   const c = stats.cat[cat] || (stats.cat[cat] = { n: 0, pts: 0 }); c.n++; c.pts += total;
   const d = document.createElement('div'); d.textContent = label + ' +' + total + (combo > 0 ? '（' + combo + 'コンボ ×' + rate.toFixed(2) + '）' : ''); if (gold) d.className = 'gold';
   comboHit();
@@ -673,6 +704,7 @@ function comboHit() {
   if (state !== 'play') return;
   combo = Math.min(comboMax, combo + 1); comboT = comboTime; stats.maxCombo = Math.max(stats.maxCombo, combo);
   retrigger($('combo'), 'bump');
+  tutEvent('combo', { n: combo });
 }
 function updateCombo(dt, paused) {
   if (state === 'play' && !paused && combo > 0) { comboT -= dt; if (comboT <= 0) { combo = 0; comboT = 0; } }
@@ -727,6 +759,7 @@ function endFlip() {
 }
 function pop(text) { $('pop').textContent = text; $('pop').style.opacity = 1; popT = 0.7; }
 function startGame() {
+  tutEnd();
   $('title').hidden = true; $('over').hidden = true; reset(); state = 'play';
   touches.clear(); held.L = held.R = false; keys.L = keys.R = false; mouseSide = null;
   $('padL').classList.remove('on'); $('padR').classList.remove('on');
@@ -734,6 +767,7 @@ function startGame() {
 }
 function gameOver(why) {
   if (state !== 'play') return;
+  if (tut) { tutRespawn(why); return; }
   state = 'over';
   for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; ropes[s].mark.visible = false; }
   if (flip && flip.shown) { $('spinPts').textContent = '失敗…'; $('spin').classList.add('fail'); spinHide = 0.9; }
@@ -765,10 +799,76 @@ function gameOver(why) {
 }
 $('start').addEventListener('click', startGame);
 $('retry').addEventListener('click', startGame);
-$('toTitle').addEventListener('click', () => {
-  $('over').hidden = true; reset(); state = 'title'; $('title').hidden = false;
-  $('spin').hidden = true; $('feed').textContent = '';
-});
+$('toTitle').addEventListener('click', () => toTitle());
+
+// ---------- tutorial ----------
+// practice mode: one lesson at a time, each clears when you do it; crashes just respawn you
+let tut = null;
+const NEAR_CATS = ['すれすれ', 'Wスレスレ', '地面すれすれ'];
+const TUT = [
+  { t: '左ワイヤー', d: '画面の<b>左半分</b>を押し続けて、左のビルにぶら下がろう（1秒）', goal: 1, tick: (s, dt) => ropes.L.on ? dt : 0 },
+  { t: '右ワイヤー', d: '今度は<b>右半分</b>を押し続けて、右のビルにぶら下がろう（1秒）', goal: 1, tick: (s, dt) => ropes.R.on ? dt : 0 },
+  { t: '離して飛ぶ', d: '振り子の<b>一番下を少し過ぎたところ</b>で指を離すと、前へ大きく飛べる。離して1秒空中にいよう', goal: 1,
+    on: (s, e) => { if (e.type === 'release') s.armed = true; if (e.type === 'attach') s.armed = false; }, tick: (s, dt) => s.armed && !onRoof ? dt : (s.v = 0, 0) },
+  { t: '左右でつなぐ', d: '左右のワイヤーを<b>交互に</b>使って、落ちずに <b>300m</b> 進もう', goal: 300, tick: (s, dt) => Math.hypot(vel.x, vel.z) * dt },
+  { t: '巻き取り', d: 'ワイヤーを刺したまま<b>指を上にスライド</b>すると巻き取れる。<b>8m</b> 巻き取ろう', goal: 8, on: (s, e) => e.type === 'reel' ? e.amt : 0 },
+  { t: 'ジェット', d: '中央下のジェットの<b>押した方向</b>に急加速する（10秒に1回）。どこかを押してみよう', goal: 1, on: (s, e) => e.type === 'jet' ? 1 : 0 },
+  { t: 'すれすれ', d: 'ビルの横（3m以内）や地面の近く（4m未満）を<b>ぶつからずに</b>通り抜けよう', goal: 1, on: (s, e) => e.type === 'bonus' && NEAR_CATS.includes(e.label) ? 1 : 0 },
+  { t: 'アイテム', d: '大通りに浮かぶ<b>青</b>（1000pt・コンボ上限アップ）か<b>金</b>（回転と加速アップ）を取ろう', goal: 1, on: (s, e) => e.type === 'item' ? 1 : 0 },
+  { t: '屋上に着地', d: 'ビルの<b>屋上に上から</b>落ちると走れる（端で自動ジャンプ）。ジェット↑で高く上がるとやりやすい', goal: 1, on: (s, e) => e.type === 'bonus' && e.label === '着地' ? 1 : 0 },
+  { t: '回転ジャンプ', d: '<b>勢いよく上に飛びながら</b>離すと回転する。1回転以上・1.5秒以上の滞空で成功', goal: 1, on: (s, e) => e.type === 'bonus' && e.label === '回転ジャンプ' ? 1 : 0 },
+  { t: 'バックフリップ', d: 'ワイヤーを刺したまま<b>巻き取りすぎて</b>、進む向きを<b>180°逆</b>にしよう（+1000pt）', goal: 1, on: (s, e) => e.type === 'bonus' && e.label === 'バックフリップ' ? 1 : 0 },
+  { t: 'コンボ', d: 'ボーナスを<b>3秒以内に続けて</b>取るとコンボがつながり、点数が上乗せされる。<b>3コンボ</b>しよう', goal: 3, on: (s, e) => e.type === 'combo' && e.n > s.v ? e.n - s.v : 0 },
+];
+function tutShow() {
+  const L = TUT[tut.i];
+  $('tutNo').textContent = (tut.i + 1) + '/' + TUT.length; $('tutT').textContent = L.t; $('tutD').innerHTML = L.d;
+  $('tut').classList.remove('ok'); $('tutBar').style.width = '0%';
+}
+function tutSet(i) { tut.i = i; tut.s = { v: 0 }; tut.clear = 0; if (i >= TUT.length) return tutFinish(); tutShow(); }
+function tutAdd(x) {
+  if (!tut || tut.clear || !x) return;
+  const L = TUT[tut.i]; tut.s.v += x;
+  $('tutBar').style.width = Math.min(100, tut.s.v / L.goal * 100) + '%';
+  if (tut.s.v >= L.goal) { tut.clear = 1.1; $('tut').classList.add('ok'); burst(pos, 50, 10); flashScreen('rgba(255,181,58,.18)'); }
+}
+function tutEvent(type, e) {
+  if (!tut || state !== 'play' || tut.clear) return;
+  const L = TUT[tut.i]; if (!L.on) return;
+  tutAdd(L.on(tut.s, Object.assign({ type }, e)));
+}
+function tutTick(dt) {
+  if (!tut || state !== 'play') return;
+  if (tut.clear) { tut.clear -= dt; if (tut.clear <= 0) tutSet(tut.i + 1); return; }
+  const L = TUT[tut.i]; if (!L.tick) return;
+  const before = tut.s.v, x = L.tick(tut.s, dt);
+  if (x) tutAdd(x); else if (tut.s.v !== before) $('tutBar').style.width = '0%';
+}
+function tutRespawn(why) {
+  for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; }
+  flip = null; body.rotation.x = 0; onRoof = null; pendingNear.length = 0;
+  burst(pos, 60, 10); flashScreen('rgba(255,40,80,.25)'); shakeT = 0.3;
+  pos.set(0, 50, pos.z); vel.set(0, 7, -24); heading.set(0, 0, -1); camHead.copy(heading); uHist.length = 0;
+  rebuildCity(pos.x, pos.z); camera.position.copy(pos).addScaledVector(heading, -11).add(T.set(0, 4.5, 0));
+  pop(why + '　もう一度！');
+}
+function tutFinish() {
+  state = 'over'; $('tut').hidden = true;
+  for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; ropes[s].mark.visible = false; }
+  burst(pos, 120, 16); flashScreen('rgba(255,210,58,.3)');
+  setTimeout(() => { $('tutDone').hidden = false; }, 500);
+}
+function tutEnd() { tut = null; $('tut').hidden = true; $('tutDone').hidden = true; document.body.classList.remove('tutorial'); }
+function startTutorial() {
+  startGame(); tut = { i: 0, s: { v: 0 }, clear: 0 }; document.body.classList.add('tutorial'); $('tut').hidden = false; tutSet(0); pop('チュートリアル');
+}
+function toTitle() { tutEnd(); $('over').hidden = true; reset(); state = 'title'; $('title').hidden = false; $('spin').hidden = true; $('feed').textContent = ''; }
+const tapBtn = (id, fn) => { const el = $(id); el.addEventListener('click', fn); for (const ev of ['touchstart', 'mousedown']) el.addEventListener(ev, e => e.stopPropagation()); };
+tapBtn('tutStart', startTutorial);
+tapBtn('tutSkip', () => { if (tut && !tut.clear) tutSet(tut.i + 1); });
+tapBtn('tutQuit', toTitle);
+tapBtn('tutGo', () => { tutEnd(); startGame(); });
+tapBtn('tutTitle', toTitle);
 
 // tuning panel
 const tune = [['G', 'tG', 'oG'], ['PUMP', 'tP', 'oP'], ['RANGE', 'tR', 'oR'], ['MINSPD', 'tS', 'oS'], ['TURN', 'tT', 'oT']];
@@ -847,7 +947,7 @@ function step(dt) {
       const amt = Math.min(r.reelReq, REEL_SPEED * dt, r.len - 8);
       r.reelReq = amt > 0 ? r.reelReq - amt : 0;
       if (amt > 0 && l > 0.1) {
-        const old = r.len; r.len -= amt; r.reelT = 0.25;
+        const old = r.len; r.len -= amt; r.reelT = 0.25; tutEvent('reel', { amt });
         nrm.copy(tmp).multiplyScalar(1 / l);
         const vr0 = vel.dot(nrm);
         tang.copy(vel).addScaledVector(nrm, -vr0);
@@ -928,6 +1028,7 @@ function frame(now) {
     for (const s of ['L', 'R']) if (held[s] && !ropes[s].on && state === 'play') attach(s);
     maxDist = Math.max(maxDist, Math.hypot(pos.x, pos.z - 8));
     if (state === 'play') pickItems();
+    tutTick(dt);
     rebuildCity(pos.x, pos.z);
   }
   // aim preview (throttled)
@@ -1034,6 +1135,6 @@ reset();
 requestAnimationFrame(frame);
 
 // test hook
-window.__wc = { step, findAnchor, attach, detach, rebuildCity, heading, get state() { return state; }, set state(v) { state = v; }, pos, vel, ropes, held, setHeld, startGame, P, get dist() { return maxDist; }, get score() { return score; }, get flip() { return flip; }, get onRoof() { return onRoof; }, fireJet, get jetCD() { return jetCD; }, activeItems };
+window.__wc = { step, findAnchor, attach, detach, rebuildCity, heading, get state() { return state; }, set state(v) { state = v; }, pos, vel, ropes, held, setHeld, startGame, P, get dist() { return maxDist; }, get score() { return score; }, get flip() { return flip; }, get onRoof() { return onRoof; }, fireJet, get jetCD() { return jetCD; }, activeItems, get tut() { return tut; }, startTutorial };
 })();
 </script>
