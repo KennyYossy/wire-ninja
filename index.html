@@ -151,7 +151,8 @@ body.no-combo #combo{display:none}
 .chalRes{margin:0;font-weight:700;text-align:center;color:#ff9ad5}.chalRes.won{color:#7dffb0}
 .share{align-self:stretch;width:100%;display:flex;flex-direction:column;gap:8px}.share .ghost{padding:10px 14px}
 #shareText{width:100%;box-sizing:border-box;font:13px var(--body);color:var(--ink);background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:8px;resize:none}
-.row3{display:flex;gap:8px}.row3 .ghost{flex:1;padding:9px 6px}
+.row3{display:flex;gap:8px}.row3 .ghost{flex:1;padding:9px 6px;text-align:center;text-decoration:none;box-sizing:border-box}
+.shareMsg{margin:0;font-size:12px;color:#ffd23a;text-align:center;min-height:1em}
 #combo{margin-top:8px;display:grid;grid-template-columns:auto auto 1fr;align-items:baseline;column-gap:6px;width:150px;transform-origin:left center}
 #combo .lbl{font:700 11px var(--display);letter-spacing:.16em;color:var(--cyan)}
 #combo b{font:700 26px var(--display);font-variant-numeric:tabular-nums;color:#fff;text-shadow:0 0 10px var(--cyan)}
@@ -375,8 +376,9 @@ body.no-combo #combo{display:none}
     <dl class="breakdown" id="breakdown"></dl>
     <div class="stats" id="stats"></div>
     <div class="share"><button class="ghost" id="shareBtn" type="button" data-en="Share / challenge a friend">結果をシェア・友達に挑戦</button>
-      <div id="sharePanel" hidden><textarea id="shareText" readonly rows="4" aria-label="share text"></textarea>
-        <div class="row3"><button class="ghost" id="shareX" type="button">X</button><button class="ghost" id="shareNative" type="button" data-en="Share">共有</button><button class="ghost" id="shareCopy" type="button" data-en="Copy">コピー</button></div></div></div>
+      <div id="sharePanel" hidden><textarea id="shareText" rows="4" aria-label="share text"></textarea>
+        <div class="row3"><a class="ghost" id="shareX" href="https://twitter.com/intent/tweet" target="_blank" rel="noopener noreferrer">X</a><button class="ghost" id="shareNative" type="button" data-en="Share">共有</button><button class="ghost" id="shareCopy" type="button" data-en="Copy">コピー</button></div>
+        <p class="shareMsg" id="shareMsg"></p></div></div>
     <div class="btns">
       <button class="go" id="retry" type="button" data-en="Retry">もう一度</button>
       <button class="ghost" id="toTitle" type="button" data-en="Title">タイトルへ</button>
@@ -1115,7 +1117,9 @@ const BEST_TILE = { dopa: 'bestD', super: 'bestS', kyoku: 'bestK' };
 const MODE_BTN = { dopa: ['startDopa', 'アイテム5倍', 'Items ×5'], super: ['startSuper', 'アイテム10倍', 'Items ×10'], kyoku: ['startKyoku', '金20倍・青銀10倍', 'Gold ×20, blue/silver ×10'] };
 let plays = { normal: 0, dopa: 0, super: 0, kyoku: 0 };
 try { Object.assign(plays, JSON.parse(localStorage.getItem('wc-plays') || '{}')); } catch (e) {}
-const unlocked = m => !UNLOCK[m] || plays[UNLOCK[m]] >= UNLOCK_RUNS;
+let gifted = {}; try { gifted = JSON.parse(localStorage.getItem('wc-gift') || '{}') || {}; } catch (e) {}
+const unlocked = m => !UNLOCK[m] || !!gifted[m] || plays[UNLOCK[m]] >= UNLOCK_RUNS;
+function giftUnlock(m) { if (!UNLOCK[m] || unlocked(m)) return; gifted[m] = 1; try { localStorage.setItem('wc-gift', JSON.stringify(gifted)); } catch (e) {} setTimeout(() => pop(J(MODE_NAME[m] + ' 解放！', MODE_NAME[m] + ' UNLOCKED!')), 300); }
 function countPlay() { plays[mode] = (plays[mode] || 0) + 1; try { localStorage.setItem('wc-plays', JSON.stringify(plays)); } catch (e) {} }
 function showLocks() {
   for (const m in MODE_BTN) {
@@ -1141,6 +1145,7 @@ function readChallengeURL() {
 function modeLabel(m) { return MODE_NAME[m] || J('通常', 'Normal'); }
 function showChallenge() {
   $('chal').hidden = !challenge; if (!challenge) return;
+  if (!unlocked(challenge.mode)) { giftUnlock(challenge.mode); if (typeof showLocks === 'function') showLocks(); }
   const lockedTxt = unlocked(challenge.mode) ? '' : J('（このモードはまだ未解放）', ' (this mode is still locked)');
   $('chalT').textContent = J('挑戦状：' + (unlocked(challenge.mode) ? modeLabel(challenge.mode) : '？？？') + 'で ' + fmtFit(challenge.score, 13) + ' pt を超えろ！',
     'Challenge: beat ' + fmtFit(challenge.score, 13) + ' pt in ' + (unlocked(challenge.mode) ? modeLabel(challenge.mode) : '？？？') + '!') + lockedTxt;
@@ -1159,13 +1164,22 @@ function shareText(sc) {
 }
 function shareURL(sc) { return GAME_URL + '?challenge=' + sc + '&mode=' + mode; }
 let lastScore = 0;
-$('shareBtn').addEventListener('click', () => { const t = shareText(lastScore) + '\n' + shareURL(lastScore); $('shareText').value = t; $('sharePanel').hidden = false; $('shareNative').hidden = !navigator.share; });
-$('shareX').addEventListener('click', () => { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText(lastScore)) + '&url=' + encodeURIComponent(shareURL(lastScore)), '_blank', 'noopener'); });
-$('shareNative').addEventListener('click', () => { if (navigator.share) navigator.share({ title: 'WIRE NINJA', text: shareText(lastScore), url: shareURL(lastScore) }).catch(() => {}); });
-$('shareCopy').addEventListener('click', () => { const ta = $('shareText'); ta.focus(); ta.select();
-  const done = () => pop(J('コピーしました', 'Copied'));
-  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(done, () => { try { document.execCommand('copy'); done(); } catch (e) {} });
-  else { try { document.execCommand('copy'); done(); } catch (e) {} } });
+function shareMsg(t) { $('shareMsg').textContent = t || ''; }
+function selectShare() { const ta = $('shareText'); ta.focus(); ta.select(); try { ta.setSelectionRange(0, ta.value.length); } catch (e) {} }
+const copyFail = () => { selectShare(); shareMsg(J('この画面では自動コピーできません。上の文を長押ししてコピーしてください', 'Auto-copy is blocked here. Long-press the text above to copy it')); };
+$('shareBtn').addEventListener('click', () => { $('shareText').value = shareText(lastScore) + '\n' + shareURL(lastScore);
+  $('shareX').href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText(lastScore)) + '&url=' + encodeURIComponent(shareURL(lastScore));
+  $('sharePanel').hidden = false; $('shareNative').hidden = !navigator.share; shareMsg(''); });
+$('shareX').addEventListener('click', () => { shareMsg(J('Xが開かない場合は、上の文をコピーしてXに貼ってください', 'If X does not open, copy the text above and paste it into X')); });
+$('shareNative').addEventListener('click', () => {
+  if (!navigator.share) return copyFail();
+  try { navigator.share({ title: 'WIRE NINJA', text: shareText(lastScore), url: shareURL(lastScore) }).catch(err => { if (!err || err.name !== 'AbortError') copyFail(); }); } catch (e) { copyFail(); } });
+$('shareCopy').addEventListener('click', () => { selectShare();
+  const ok = () => shareMsg(J('コピーしました', 'Copied'));
+  let done = false; try { done = document.execCommand('copy'); } catch (e) {}
+  if (done) return ok();
+  if (navigator.clipboard && navigator.clipboard.writeText) { try { navigator.clipboard.writeText($('shareText').value).then(ok, copyFail); } catch (e) { copyFail(); } }
+  else copyFail(); });
 $('codeBtn').addEventListener('click', () => { $('codeBox').hidden = false; $('codeBtn').hidden = true; $('codeIn').focus(); });
 const acceptCode = () => { const c = parseCode($('codeIn').value); if (!c) { retrigger($('codeIn'), 'shake'); return; }
   challenge = c; $('codeBox').hidden = true; $('codeBtn').hidden = false; $('codeIn').value = ''; showChallenge(); };
