@@ -141,6 +141,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 .pts{margin:0;font-size:12px;line-height:1.6;color:var(--dim)}
 #feed{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
 #feed div{font:700 17px var(--display);color:var(--amber);white-space:nowrap;-webkit-text-stroke:1px rgba(0,0,0,.5);text-shadow:0 0 12px rgba(255,181,58,.9),0 0 30px rgba(255,63,180,.6);animation:feed 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
+#feed div.blue{color:#8fc9ff;text-shadow:0 0 12px #4fa8ff,0 0 26px #4fa8ff}
 #feed div.gold{color:#ffe066;font-size:26px;text-shadow:0 0 14px #ffd23a,0 0 40px #ff3fb4}
 @keyframes feed{0%{opacity:0;transform:scale(1.5) rotate(-3deg)}18%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-30px) scale(.9)}}
 @media (prefers-reduced-motion:reduce){#feed div,#spin b,#spin em,#score.bump,#flash.go{animation:none}}
@@ -385,7 +386,11 @@ function pickItems() {
     if (!a.g.visible) continue;
     if (a.g.position.distanceToSquared(pos) < 56) {
       a.g.visible = false; collected.add(a.it.key);
-      if (a.it.kind === 'blue') { bonus(1000, 'アイテム'); comboMax += 5; comboTime += 1; comboT = comboTime; }
+      if (a.it.kind === 'blue') {
+        bonus(1000, 'アイテム'); comboMax += 5; comboTime += 1; comboT = comboTime;
+        const d = document.createElement('div'); d.className = 'blue'; d.textContent = '最大COMBO数＆継続時間↑（' + comboMax + ' / ' + comboTime + '秒）';
+        $('feed').appendChild(d); setTimeout(() => d.remove(), 1600);
+      }
       else goldPickup();
     }
   }
