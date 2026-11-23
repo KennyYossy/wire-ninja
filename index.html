@@ -415,12 +415,13 @@ function bridgeValue(y0) {
   return { pts: Math.round((500 + 1500 * t) / 100) * 100, col };
 }
 function bridge(i, j) {
-  if (tut) return null;                                    // keep the tutorial city simple
-  const key = i + ',' + j;
+  if (tut && !feat('bridge')) return null;                 // tutorial: no bridges before their lesson
+  const dense = tut && TUT[tut.i].unlock === 'bridge';     // ...and plenty during it
+  const key = (dense ? 't' : '') + i + ',' + j;
   if (bridgeCache.has(key)) return bridgeCache.get(key);
   let br = null;
   const ai = ((i % 4) + 4) % 4 === 0, aj = ((j % 4) + 4) % 4 === 0;
-  if (ai !== aj && rnd(i, j, 20) < 0.16 && !(i === 0 && j > -6)) {
+  if (ai !== aj && rnd(i, j, 20) < (dense ? 0.5 : 0.16) && !(i === 0 && j > -6)) {
     const A = ai ? cell(i - 1, j) : cell(i, j - 1), B = ai ? cell(i + 1, j) : cell(i, j + 1);
     if (A && B) {
       const low = Math.min(A.h, B.h), W = 6, TH = 3;
@@ -910,7 +911,7 @@ $('toTitle').addEventListener('click', () => toTitle());
 // practice mode: one lesson at a time, each clears when you do it; crashes just respawn you
 let tut = null;
 const NEAR_CATS = ['すれすれ', 'Wスレスレ', '地面すれすれ'];
-const BONUS_FEAT = { 'すれすれ': 'near', 'Wスレスレ': 'near', '地面すれすれ': 'near', 'アイテム': 'blue', '着地': 'roof', '回転ジャンプ': 'spin', 'バックフリップ': 'back' };
+const BONUS_FEAT = { 'すれすれ': 'near', 'Wスレスレ': 'near', '地面すれすれ': 'near', 'アイテム': 'blue', '着地': 'roof', '回転ジャンプ': 'spin', 'バックフリップ': 'back', '橋くぐり': 'bridge' };
 // in the tutorial a mechanic (and its UI) only exists from the lesson that introduces it
 function feat(name) {
   if (!tut) return true;
@@ -933,6 +934,7 @@ const TUT = [
   { t: 'すれすれ', unlock: 'near', d: 'ビルの横（3m以内）や地面の近く（4m未満）を<b>ぶつからずに</b>通り抜けよう', goal: 1, on: (s, e) => e.type === 'bonus' && NEAR_CATS.includes(e.label) ? 1 : 0 },
   { t: '青アイテム', unlock: 'blue', d: '大通りに浮かぶ<b>青いアイテム</b>を取ろう。1000pt ＋ コンボ上限+5・コンボ時間+1秒', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'blue' ? 1 : 0 },
   { t: '金アイテム', unlock: 'gold', d: '<b>金のアイテム</b>を取ろう。点数はないけど、取るたびに回転スピード×1.2・加速×1.1（そのゲーム中ずっと）', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'gold' ? 1 : 0 },
+  { t: '橋くぐり', unlock: 'bridge', d: 'ビルの間にかかった<b>橋の下</b>をくぐろう。<b>低い橋ほど高得点</b>（水色500 → ピンク → 金2000pt）。橋にぶつかると失敗', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '橋くぐり' ? 1 : 0 },
   { t: '屋上に着地', unlock: 'roof', d: 'ビルの<b>屋上に上から</b>落ちると走れる（端で自動ジャンプ）。ジェット↑で高く上がるとやりやすい', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '着地' ? 1 : 0 },
   { t: '回転ジャンプ', unlock: 'spin', d: '<b>勢いよく上に飛びながら</b>離すと回転する。1回転以上・1.5秒以上の滞空で成功', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '回転ジャンプ' ? 1 : 0 },
   { t: 'バックフリップ', unlock: 'back', d: 'ワイヤーを刺したまま<b>巻き取りすぎて</b>、進む向きを<b>180°逆</b>にしよう（+1000pt）', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === 'バックフリップ' ? 1 : 0 },
