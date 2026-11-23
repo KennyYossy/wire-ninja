@@ -93,6 +93,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
   background:rgba(10,6,24,.82);border:1px solid rgba(53,242,255,.45);border-radius:14px;padding:10px 12px 10px;box-shadow:0 0 20px rgba(53,242,255,.25);z-index:5}
 #tut .top{display:flex;align-items:baseline;gap:8px}
 #tut .no{font:700 12px var(--display);color:var(--cyan);letter-spacing:.12em}
+#tut .cnt{font:700 18px var(--display);color:var(--amber);font-variant-numeric:tabular-nums}
 #tut h3{margin:0;font:700 17px var(--body);color:#fff;flex:1}
 #tut p{margin:4px 0 0;font:500 13px/1.5 var(--body);color:var(--ink)}
 #tut p b{color:var(--amber)}
@@ -152,6 +153,7 @@ body.no-combo #combo{display:none}
 #combo.c3 u{background:linear-gradient(90deg,#35f2ff,#ff3fb4,#ffb53a,#7dffb0,#35f2ff);background-size:200% 100%;animation:rainbow 1s linear infinite;box-shadow:0 0 10px rgba(255,255,255,.6)}
 #combo.c3 b,#combo.c3.full b{color:transparent;background:linear-gradient(90deg,#35f2ff,#ff3fb4,#ffb53a,#7dffb0,#35f2ff);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;animation:rainbow 1s linear infinite;text-shadow:none}
 #combo.full b{color:#ffd23a;text-shadow:0 0 12px #ffd23a}
+#tutCnt.bump{animation:bump .4s cubic-bezier(.2,1.8,.4,1);display:inline-block}
 #combo.bump{animation:bump .35s cubic-bezier(.2,1.8,.4,1)}
 #score{display:inline-block;transform-origin:left center}
 #jet{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);width:150px;height:150px;margin-left:-75px;border-radius:50%;
@@ -253,7 +255,7 @@ body.no-combo #combo{display:none}
 </div>
 
 <div id="tut" hidden>
-  <div class="top"><span class="no" id="tutNo">1/12</span><h3 id="tutT"></h3></div>
+  <div class="top"><span class="no" id="tutNo">1/12</span><h3 id="tutT"></h3><span class="cnt" id="tutCnt"></span></div>
   <p id="tutD"></p>
   <div class="bar"><u id="tutBar"></u></div>
   <div class="row"><button id="tutSkip" type="button">スキップ ▶</button><button id="tutQuit" type="button">やめる</button></div>
@@ -841,17 +843,18 @@ const TUT = [
   { t: '巻き取り', unlock: 'reel', d: 'ワイヤーを刺したまま<b>指を上にスライド</b>すると巻き取れる。<b>8m</b> 巻き取ろう', goal: 8, on: (s, e) => e.type === 'reel' ? e.amt : 0 },
   { t: 'ジェット', unlock: 'jet', d: '中央下のジェットの<b>押した方向</b>に急加速する（10秒に1回）。どこかを押してみよう', goal: 1, on: (s, e) => e.type === 'jet' ? 1 : 0 },
   { t: 'すれすれ', unlock: 'near', d: 'ビルの横（3m以内）や地面の近く（4m未満）を<b>ぶつからずに</b>通り抜けよう', goal: 1, on: (s, e) => e.type === 'bonus' && NEAR_CATS.includes(e.label) ? 1 : 0 },
-  { t: '青アイテム', unlock: 'blue', d: '大通りに浮かぶ<b>青いアイテム</b>を取ろう。1000pt ＋ コンボ上限+5・コンボ時間+1秒', goal: 1, on: (s, e) => e.type === 'item' && e.kind === 'blue' ? 1 : 0 },
-  { t: '金アイテム', unlock: 'gold', d: '<b>金のアイテム</b>を取ろう。点数はないけど、取るたびに回転スピード×1.2・加速×1.1（そのゲーム中ずっと）', goal: 1, on: (s, e) => e.type === 'item' && e.kind === 'gold' ? 1 : 0 },
-  { t: '屋上に着地', unlock: 'roof', d: 'ビルの<b>屋上に上から</b>落ちると走れる（端で自動ジャンプ）。ジェット↑で高く上がるとやりやすい', goal: 1, on: (s, e) => e.type === 'bonus' && e.label === '着地' ? 1 : 0 },
-  { t: '回転ジャンプ', unlock: 'spin', d: '<b>勢いよく上に飛びながら</b>離すと回転する。1回転以上・1.5秒以上の滞空で成功', goal: 1, on: (s, e) => e.type === 'bonus' && e.label === '回転ジャンプ' ? 1 : 0 },
-  { t: 'バックフリップ', unlock: 'back', d: 'ワイヤーを刺したまま<b>巻き取りすぎて</b>、進む向きを<b>180°逆</b>にしよう（+1000pt）', goal: 1, on: (s, e) => e.type === 'bonus' && e.label === 'バックフリップ' ? 1 : 0 },
-  { t: 'コンボ', unlock: 'combo', d: 'ボーナスを<b>3秒以内に続けて</b>取るとコンボがつながり、点数が上乗せされる。<b>3コンボ</b>しよう', goal: 3, on: (s, e) => e.type === 'combo' && e.n > s.v ? e.n - s.v : 0 },
+  { t: '青アイテム', unlock: 'blue', d: '大通りに浮かぶ<b>青いアイテム</b>を取ろう。1000pt ＋ コンボ上限+5・コンボ時間+1秒', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'blue' ? 1 : 0 },
+  { t: '金アイテム', unlock: 'gold', d: '<b>金のアイテム</b>を取ろう。点数はないけど、取るたびに回転スピード×1.2・加速×1.1（そのゲーム中ずっと）', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'gold' ? 1 : 0 },
+  { t: '屋上に着地', unlock: 'roof', d: 'ビルの<b>屋上に上から</b>落ちると走れる（端で自動ジャンプ）。ジェット↑で高く上がるとやりやすい', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '着地' ? 1 : 0 },
+  { t: '回転ジャンプ', unlock: 'spin', d: '<b>勢いよく上に飛びながら</b>離すと回転する。1回転以上・1.5秒以上の滞空で成功', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '回転ジャンプ' ? 1 : 0 },
+  { t: 'バックフリップ', unlock: 'back', d: 'ワイヤーを刺したまま<b>巻き取りすぎて</b>、進む向きを<b>180°逆</b>にしよう（+1000pt）', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === 'バックフリップ' ? 1 : 0 },
+  { t: 'コンボ', unlock: 'combo', d: 'ボーナスを<b>3秒以内に続けて</b>取るとコンボがつながり、点数が上乗せされる。<b>3コンボ</b>を2回しよう', goal: 2, count: true, on: (s, e) => e.type === 'combo' && e.n === 3 ? 1 : 0 },
 ];
 function tutShow() {
   const L = TUT[tut.i];
   $('tutNo').textContent = (tut.i + 1) + '/' + TUT.length; $('tutT').textContent = L.t; $('tutD').innerHTML = L.d;
   $('tut').classList.remove('ok'); $('tutBar').style.width = '0%';
+  $('tutCnt').textContent = L.count ? '0 / ' + L.goal : '';
 }
 function tutSet(i) {
   tut.i = i; tut.s = { v: 0 }; tut.clear = 0; if (i >= TUT.length) return tutFinish();
@@ -862,7 +865,7 @@ function tutSet(i) {
   touches.clear(); held.L = held.R = false; keys.L = keys.R = false; mouseSide = null;
   document.body.classList.toggle('no-combo', !feat('combo'));
   const L = TUT[i];
-  $('trNo').textContent = 'STEP ' + (i + 1) + ' / ' + TUT.length; $('trT').textContent = L.t; $('trD').innerHTML = L.d;
+  $('trNo').textContent = 'STEP ' + (i + 1) + ' / ' + TUT.length; $('trT').textContent = L.t; $('trD').innerHTML = L.d + (L.count ? '<br><b>' + L.goal + '回</b>できたらクリア' : '');
   $('tutReady').hidden = false;
 }
 function tutBegin() {
@@ -873,6 +876,7 @@ function tutAdd(x) {
   if (!tut || tut.clear || !x) return;
   const L = TUT[tut.i]; tut.s.v += x;
   $('tutBar').style.width = Math.min(100, tut.s.v / L.goal * 100) + '%';
+  if (L.count) { $('tutCnt').textContent = Math.min(tut.s.v, L.goal) + ' / ' + L.goal; if (tut.s.v < L.goal) { retrigger($('tutCnt'), 'bump'); pop('あと' + (L.goal - tut.s.v) + '回！'); } }
   if (tut.s.v >= L.goal) { tut.clear = 1.1; $('tut').classList.add('ok'); burst(pos, 50, 10); flashScreen('rgba(255,181,58,.18)'); }
 }
 function tutEvent(type, e) {
