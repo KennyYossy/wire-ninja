@@ -783,7 +783,9 @@ const MODE_NAME = { normal: '', dopa: 'ドパガキ', super: '超ドパガキ', 
 try { for (const m in BEST_KEY) bests[m] = +localStorage.getItem(BEST_KEY[m]) || 0; } catch (e) {}
 best = bests.normal;
 // score formats for the high-score displays: exponent (1.23e+6) with full kanji numerals underneath
-const fmtExp = n => n > 0 ? n.toExponential(2) : '0';
+// 1.23×10⁸ style (superscript digits so it works in plain text too)
+const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+const fmtExp = n => { if (!(n > 0)) return '0'; const [m, e] = n.toExponential(2).split('e'); return m + '×10' + String(+e).split('').map(c => c === '-' ? '⁻' : SUP[c]).join(''); };
 // plain number while it fits in `max` characters, exponent form once it would not
 const fmtFit = (n, max) => { const t = Math.round(n).toLocaleString(); return t.length <= max ? t : fmtExp(n); };
 function kanjiNum(n) {
