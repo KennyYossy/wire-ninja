@@ -251,7 +251,7 @@ body.no-combo #combo{display:none}
       <div class="r"><strong>右半分 ▶</strong>押すと右のビルにワイヤー。離すとワイヤーが外れる</div>
     </div>
     <p class="tip">振り子の<em>一番下を少し過ぎたところ</em>で離すと大きく前へ飛ぶ。粘りすぎるとビルに激突、早すぎると失速。刺したまま<em>指を上にスライド</em>すると巻き取って、振りが小さく速くなる。ワイヤーは<em>5秒で切れる</em>（切れる前に赤く点滅）。地面かビルに当たったら配達失敗。</p>
-    <p class="pts">1m = 10pt ／ 青アイテム 1000pt ／ 金アイテムは取るたび回転スピード×1.2・加速×1.1 ／ ボーナスはコンボ数×5%上乗せ（青アイテムでコンボ上限+5・時間+1秒） ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 100→200→300→500→800→1300…（GOOD→COOL→…→UNBELIEVABLE）／ ビルの間を両側すれすれ Wスレスレ 1000pt ／ 地面すれすれ（高さ4m未満）1500pt／ 進む向きが180°逆になったらバックフリップ 1000pt ／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
+    <p class="pts">1m = 10pt ／ 青アイテム 1000pt ／ 金アイテムは取るたび回転スピード×1.2・加速×1.1 ／ ボーナスはコンボ数×5%上乗せ（青アイテムでコンボ上限+5・時間+1秒） ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 100→200→300→500→800→1300…（GOOD→COOL→…→UNBELIEVABLE）／ ビルの間を両側すれすれ Wスレスレ 1000pt ／ 地面すれすれ（高さ4m未満）1500pt／ 進む向きが180°逆になったらバックフリップ 1000pt ／ ビルの間の橋の下をくぐると 1000pt（すれすれは別に加算）／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
     <div class="btns"><button class="go" id="start" type="button">スタート</button><button class="ghost" id="tutStart" type="button">チュートリアル</button></div>
   </div>
 </div>
@@ -403,6 +403,58 @@ function cell(i, j) {
   return b;
 }
 
+// ---------- bridges ----------
+// now and then a skybridge spans an avenue between the two buildings that face it; fly under it for a bonus
+const bridgeCache = new Map(), MAX_BR = 120;
+function bridge(i, j) {
+  if (tut) return null;                                    // keep the tutorial city simple
+  const key = i + ',' + j;
+  if (bridgeCache.has(key)) return bridgeCache.get(key);
+  let br = null;
+  const ai = ((i % 4) + 4) % 4 === 0, aj = ((j % 4) + 4) % 4 === 0;
+  if (ai !== aj && rnd(i, j, 20) < 0.16 && !(i === 0 && j > -6)) {
+    const A = ai ? cell(i - 1, j) : cell(i, j - 1), B = ai ? cell(i + 1, j) : cell(i, j + 1);
+    if (A && B) {
+      const low = Math.min(A.h, B.h), W = 6, TH = 3;
+      if (low > 32) {
+        const y0 = 12 + rnd(i, j, 21) * (low - 12 - 14), y1 = y0 + TH;
+        if (ai) {                                            // avenue runs along z: bridge spans x
+          const lo = Math.max(A.minz, B.minz) + W / 2 + 1, hi = Math.min(A.maxz, B.maxz) - W / 2 - 1;
+          if (hi > lo) { const zc = lo + rnd(i, j, 22) * (hi - lo);
+            br = { key, ax: 'x', minx: A.maxx, maxx: B.minx, minz: zc - W / 2, maxz: zc + W / 2, y0, y1, neon: A.neon }; }
+        } else {                                             // avenue runs along x: bridge spans z
+          const lo = Math.max(A.minx, B.minx) + W / 2 + 1, hi = Math.min(A.maxx, B.maxx) - W / 2 - 1;
+          if (hi > lo) { const xc = lo + rnd(i, j, 22) * (hi - lo);
+            br = { key, ax: 'z', minx: xc - W / 2, maxx: xc + W / 2, minz: A.maxz, maxz: B.minz, y0, y1, neon: A.neon }; }
+        }
+      }
+    }
+  }
+  bridgeCache.set(key, br);
+  if (bridgeCache.size > 6000) bridgeCache.clear();
+  return br;
+}
+const bridgeDeck = new THREE.InstancedMesh(unitBox, new THREE.MeshLambertMaterial({ color: 0x241a40, emissive: 0x150c2a }), MAX_BR);
+const bridgeGlow = new THREE.InstancedMesh(unitBox, new THREE.MeshBasicMaterial({ color: 0xffffff }), MAX_BR * 2);
+[bridgeDeck, bridgeGlow].forEach(m => { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled = false; m.count = 0; scene.add(m); });
+function boxDist(b) {
+  const dx = Math.max(b.minx - pos.x, 0, pos.x - b.maxx), dy = Math.max(b.y0 - pos.y, 0, pos.y - b.y1), dz = Math.max(b.minz - pos.z, 0, pos.z - b.maxz);
+  return Math.hypot(dx, dy, dz);
+}
+function nearBridges(fn) {
+  const ci = Math.round(pos.x / CELL), cj = Math.round(pos.z / CELL);
+  for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) { const br = bridge(i, j); if (br) fn(br); }
+}
+function checkBridges(px, pz) {
+  nearBridges(br => {
+    // crossed the bridge's centre line while below it and within its span
+    if (br.ax === 'x') { const m = (br.minz + br.maxz) / 2;
+      if ((pz - m) * (pos.z - m) <= 0 && pz !== pos.z && pos.x > br.minx && pos.x < br.maxx && pos.y < br.y0) queueNear(1000, '橋くぐり', true); }
+    else { const m = (br.minx + br.maxx) / 2;
+      if ((px - m) * (pos.x - m) <= 0 && px !== pos.x && pos.z > br.minz && pos.z < br.maxz && pos.y < br.y0) queueNear(1000, '橋くぐり', true); }
+  });
+}
+
 const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), T = new THREE.Vector3(), C = new THREE.Color();
 let builtCell = null;
 function rebuildCity(px, pz) {
@@ -423,6 +475,21 @@ function rebuildCity(px, pz) {
   }
   towers.count = n; caps.count = n; ribs.count = r;
   [towers, caps, ribs].forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
+  let nb = 0, ng = 0;
+  for (let i = ci - VIEW_CELLS; i <= ci + VIEW_CELLS && nb < MAX_BR; i++) for (let j = cj - VIEW_CELLS; j <= cj + VIEW_CELLS && nb < MAX_BR; j++) {
+    const br = bridge(i, j); if (!br) continue;
+    const w = br.maxx - br.minx, d = br.maxz - br.minz, cx = (br.minx + br.maxx) / 2, cz = (br.minz + br.maxz) / 2;
+    M.compose(T.set(cx, (br.y0 + br.y1) / 2, cz), Q.identity(), S.set(w, br.y1 - br.y0, d)); bridgeDeck.setMatrixAt(nb++, M);
+    C.setHex(br.neon);
+    // neon strips along both long edges of the underside
+    for (const k of [-1, 1]) {
+      if (br.ax === 'x') M.compose(T.set(cx, br.y0 - 0.15, cz + k * (d / 2 - 0.3)), Q, S.set(w, 0.35, 0.5));
+      else M.compose(T.set(cx + k * (w / 2 - 0.3), br.y0 - 0.15, cz), Q, S.set(0.5, 0.35, d));
+      bridgeGlow.setMatrixAt(ng, M); bridgeGlow.setColorAt(ng++, C);
+    }
+  }
+  bridgeDeck.count = nb; bridgeGlow.count = ng;
+  bridgeDeck.instanceMatrix.needsUpdate = true; bridgeGlow.instanceMatrix.needsUpdate = true; if (bridgeGlow.instanceColor) bridgeGlow.instanceColor.needsUpdate = true;
   grid.position.x = (ci + 0.5) * CELL; grid.position.z = (cj + 0.5) * CELL;
   placeItems(ci, cj);
   ground.position.x = px; ground.position.z = pz;
@@ -668,9 +735,11 @@ function setHeld(s, v) {
 const keys = { L: false, R: false }; let mouseSide = null;
 const sideOf = x => (x < window.innerWidth / 2 ? 'L' : 'R');
 const touchY = new Map();
+// longer wire = faster reel (x0.6 at 18 m, x1 at 30 m, up to x2.5 at 75 m)
+const reelK = r => Math.min(2.5, Math.max(0.6, r.len / 30));
 function reelBy(side, px) {
   const r = ropes[side];
-  if (state === 'play' && r.on && px > 0 && $('tune').hidden && feat('reel')) r.reelReq = Math.min(30, r.reelReq + px * REEL_PER_PX);
+  if (state === 'play' && r.on && px > 0 && $('tune').hidden && feat('reel')) r.reelReq = Math.min(30 * reelK(r), r.reelReq + px * REEL_PER_PX * reelK(r));
 }
 canvas.addEventListener('touchstart', e => { e.preventDefault(); for (const t of e.changedTouches) { touches.set(t.identifier, sideOf(t.clientX)); touchY.set(t.identifier, t.clientY); } refreshHeld(); }, { passive: false });
 canvas.addEventListener('touchmove', e => {
@@ -807,7 +876,7 @@ function gameOver(why) {
   $('record').hidden = !isNew;
   $('best').textContent = isNew ? (prevBest > 0 ? '前のベスト ' + prevBest.toLocaleString() + ' pt' : '初めての記録') : 'ベスト ' + best.toLocaleString() + ' pt（あと ' + (best - d).toLocaleString() + ' pt）';
   // breakdown
-  const order = ['アイテム', 'すれすれ', 'Wスレスレ', '地面すれすれ', '着地', '回転ジャンプ', 'バックフリップ'];
+  const order = ['アイテム', '橋くぐり', 'すれすれ', 'Wスレスレ', '地面すれすれ', '着地', '回転ジャンプ', 'バックフリップ'];
   const rows = [['移動距離 ' + Math.floor(pathDist) + ' m', '', Math.round(stats.distPts)]];
   for (const k of order) if (stats.cat[k]) rows.push([k, '×' + stats.cat[k].n, stats.cat[k].pts]);
   const esc = t => String(t).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]);
@@ -971,7 +1040,8 @@ function collide() {
     if (pos.x > b.minx - 0.5 && pos.x < b.maxx + 0.5 && pos.z > b.minz - 0.5 && pos.z < b.maxz + 0.5 && pos.y < b.h + 0.9)
       return 'ビルに激突';
   }
-  return null;
+  let hitBr = null; nearBridges(br => { if (boxDist(br) < 0.5) hitBr = '橋に激突'; });
+  return hitBr;
 }
 function step(dt) {
   const attached = ropes.L.on || ropes.R.on;
@@ -986,7 +1056,7 @@ function step(dt) {
   // keep moving forward
   const hs = Math.hypot(vel.x, vel.z);
   if (hs < P.MINSPD) { vel.x += heading.x * (P.MINSPD - hs) * 2 * dt; vel.z += heading.z * (P.MINSPD - hs) * 2 * dt; }
-  const prevY = pos.y;
+  const prevY = pos.y, prevX = pos.x, prevZ = pos.z;
   pos.addScaledVector(vel, dt);
   const hd = Math.hypot(vel.x, vel.z) * dt; pathDist += hd; score += hd * 10; stats.distPts += hd * 10;
   stats.maxSpeed = Math.max(stats.maxSpeed, vel.length());
@@ -1006,7 +1076,7 @@ function step(dt) {
     r.len = Math.max(8, Math.min(r.len, l) - REEL * dt);   // winch keeps the line taut
     if (r.reelReq > 0) {
       // swipe-up reel: shorten the line, keep angular momentum (shorter = faster swing)
-      const amt = Math.min(r.reelReq, REEL_SPEED * dt, r.len - 8);
+      const amt = Math.min(r.reelReq, REEL_SPEED * reelK(r) * dt, r.len - 8);
       r.reelReq = amt > 0 ? r.reelReq - amt : 0;
       if (amt > 0 && l > 0.1) {
         const old = r.len; r.len -= amt; r.reelT = 0.25; tutEvent('reel', { amt });
@@ -1036,6 +1106,7 @@ function step(dt) {
     if (!ropes.L.on && !ropes.R.on) vel.y = JUMP_V;
   } else if (onRoof && pos.y > onRoof.h + FOOT + 0.05) onRoof = null;
   const hit = collide(); if (hit) { pendingNear.length = 0; gameOver(hit); return; }
+  checkBridges(prevX, prevZ);
   nearMiss(dt);
   settleNear(dt);
 }
@@ -1066,6 +1137,7 @@ function nearMiss(dt) {
     if (side > 0.3) rightB = b; else if (side < -0.3) leftB = b;
     if (d < 3 && !single) single = b;
   }
+  nearBridges(br => { const d = boxDist(br); if (d > 0.5 && d < 3 && !single) single = br; });   // skimming a bridge counts too
   if (leftB) wL = time; if (rightB) wR = time;
   if (time - wL < W_WINDOW && time - wR < W_WINDOW) {
     if (wCD <= 0) { wCD = 2; nearCD = 1.2; lastNear = single || leftB || rightB; wL = wR = -9; queueNear(1000, 'Wスレスレ', true); return; }
@@ -1204,6 +1276,6 @@ reset();
 requestAnimationFrame(frame);
 
 // test hook
-window.__wc = { step, findAnchor, attach, detach, rebuildCity, heading, get state() { return state; }, set state(v) { state = v; }, pos, vel, ropes, held, setHeld, startGame, P, get dist() { return maxDist; }, get score() { return score; }, get flip() { return flip; }, get onRoof() { return onRoof; }, fireJet, get jetCD() { return jetCD; }, activeItems, get tut() { return tut; }, startTutorial };
+window.__wc = { step, findAnchor, attach, detach, rebuildCity, heading, get state() { return state; }, set state(v) { state = v; }, pos, vel, ropes, held, setHeld, startGame, P, get dist() { return maxDist; }, get score() { return score; }, get flip() { return flip; }, get onRoof() { return onRoof; }, fireJet, get jetCD() { return jetCD; }, activeItems, bridge, get tut() { return tut; }, startTutorial };
 })();
 </script>
