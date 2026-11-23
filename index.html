@@ -179,6 +179,26 @@ body.no-combo #combo{display:none}
 #jet.ready{box-shadow:0 0 22px rgba(255,255,255,.45)}
 #jet.ready #jetCore{background:#fff;color:var(--night);box-shadow:0 0 16px #fff}
 .pts{margin:0;font-size:12px;line-height:1.6;color:var(--dim)}
+.bests{display:flex;gap:10px;width:100%;justify-content:center}
+.bests div{flex:1;max-width:170px;border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:8px 6px}
+.bests small{display:block;font-size:11px;color:var(--dim);letter-spacing:.1em}
+.bests b{font:700 22px var(--display);color:#fff;font-variant-numeric:tabular-nums}
+.bests .dopa b{background:linear-gradient(90deg,#35f2ff,#ff3fb4,#ffd23a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.modes{display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px;margin-top:4px}
+.modes .go{margin-top:0;width:100%}
+.go.dopa{background:linear-gradient(90deg,#35f2ff,#ff3fb4,#ffd23a);color:#140a24;box-shadow:0 0 22px rgba(255,63,180,.55)}
+.go small{display:block;font:700 11px var(--body);letter-spacing:.1em;opacity:.8;margin-top:2px}
+.row2{display:flex;gap:10px}.row2 .ghost{flex:1;padding:11px 8px}
+.hint{margin:4px 0 0;font-size:12px;color:var(--dim)}
+.rulecard{max-height:calc(100dvh - 32px);overflow-y:auto;text-align:left;align-items:stretch;gap:8px;padding:4px 2px}
+.rulecard .sub{text-align:center}
+.rulecard h2{margin:6px 0 0;font:700 15px var(--display);color:var(--cyan);letter-spacing:.1em}
+.rulecard ul{margin:0;padding-left:18px;font-size:13px;line-height:1.65}
+.rulecard em{font-style:normal;color:var(--amber)}
+.rulecard dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:13px}
+.rulecard dt{color:#fff;font-weight:700;white-space:nowrap}.rulecard dd{margin:0;color:var(--ink)}
+.rulecard .go{align-self:center;margin-top:8px}
+
 #feed{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
 #feed div{font:700 17px var(--display);color:var(--amber);white-space:nowrap;-webkit-text-stroke:1px rgba(0,0,0,.5);text-shadow:0 0 12px rgba(255,181,58,.9),0 0 30px rgba(255,63,180,.6);animation:feed 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
 #feed div.blue{color:#8fc9ff;text-shadow:0 0 12px #4fa8ff,0 0 26px #4fa8ff}
@@ -246,16 +266,48 @@ body.no-combo #combo{display:none}
   <div class="card">
     <p class="sub">NEON NIGHT DELIVERY</p>
     <h1 class="logo">WIRE<br>COURIER</h1>
-    <div class="how">
-      <div class="l"><strong>◀ 左半分</strong>押すと左のビルにワイヤー。押してる間ぶら下がる</div>
-      <div class="r"><strong>右半分 ▶</strong>押すと右のビルにワイヤー。離すとワイヤーが外れる</div>
+    <div class="bests"><div><small>ベスト</small><b id="bestN">0</b></div><div class="dopa"><small>ドパガキ ベスト</small><b id="bestD">0</b></div></div>
+    <div class="modes">
+      <button class="go" id="start" type="button">スタート</button>
+      <button class="go dopa" id="startDopa" type="button">ドパガキモード<small>アイテム4倍</small></button>
+      <div class="row2">
+        <button class="ghost" id="tutStart" type="button">チュートリアル</button>
+        <button class="ghost" id="rulesBtn" type="button">遊び方・得点</button>
+      </div>
     </div>
-    <p class="tip">振り子の<em>一番下を少し過ぎたところ</em>で離すと大きく前へ飛ぶ。粘りすぎるとビルに激突、早すぎると失速。刺したまま<em>指を上にスライド</em>すると巻き取って、振りが小さく速くなる。ワイヤーは<em>5秒で切れる</em>（切れる前に赤く点滅）。地面かビルに当たったら配達失敗。</p>
-    <p class="pts">1m = 10pt ／ 青アイテム 1000pt ／ 金アイテムは取るたび回転スピード×1.2・加速×1.1 ／ ボーナスはコンボ数×5%上乗せ（青アイテムでコンボ上限+5・時間+1秒） ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 100→200→300→500→800→1300…（GOOD→COOL→…→UNBELIEVABLE）／ ビルの間を両側すれすれ Wスレスレ 1000pt ／ 地面すれすれ（高さ4m未満）1500pt／ 進む向きが180°逆になったらバックフリップ 1000pt ／ ビルの間の橋の下をくぐると 500〜2000pt（低い橋ほど高い・金＞ピンク＞水色）（すれすれは別に加算）／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
-    <div class="btns"><button class="go" id="start" type="button">スタート</button><button class="ghost" id="tutStart" type="button">チュートリアル</button></div>
+    <p class="hint">左半分＝左ワイヤー ／ 右半分＝右ワイヤー</p>
   </div>
 </div>
-
+<div class="overlay" id="rules" hidden>
+  <div class="card rulecard">
+    <p class="sub">HOW TO PLAY</p>
+    <h2>操作</h2>
+    <ul>
+      <li><b>左半分 / 右半分</b>を押すと左右のビルにワイヤー。押してる間ぶら下がり、離すと外れる</li>
+      <li>振り子の<em>一番下を少し過ぎたところ</em>で離すと大きく前へ飛ぶ</li>
+      <li>刺したまま<em>指を上にスライド</em>で巻き取り（長いワイヤーほど速い）</li>
+      <li>ワイヤーは<em>5秒で切れる</em>（赤く点滅したら合図）</li>
+      <li>中央下の<em>ジェット</em>で押した方向に急加速（10秒に1回）</li>
+      <li>屋上に上から落ちると走って、端で自動ジャンプ</li>
+      <li>地面・ビル・橋にぶつかったら配達失敗</li>
+    </ul>
+    <h2>得点</h2>
+    <dl>
+      <dt>移動</dt><dd>1m = 10pt（どの方向でも）</dd>
+      <dt>青アイテム</dt><dd>1000pt ＋ コンボ上限+5・時間+1秒</dd>
+      <dt>金アイテム</dt><dd>回転スピード×1.2・加速×1.1（ずっと）</dd>
+      <dt>すれすれ</dt><dd>ビルの横3m以内 200pt</dd>
+      <dt>Wスレスレ</dt><dd>ビルの間を両側すれすれ 1000pt</dd>
+      <dt>地面すれすれ</dt><dd>高さ4m未満 1500pt</dd>
+      <dt>橋くぐり</dt><dd>500〜2000pt（低い橋ほど高い）</dd>
+      <dt>着地</dt><dd>屋上に着地 100pt</dd>
+      <dt>回転ジャンプ</dt><dd>100→200→300→500→800→1300…</dd>
+      <dt>バックフリップ</dt><dd>進む向きが180°逆に 1000pt</dd>
+      <dt>コンボ</dt><dd>ボーナスごとに＋コンボ数×5%</dd>
+    </dl>
+    <button class="go" id="rulesClose" type="button">閉じる</button>
+  </div>
+</div>
 <div id="tut" hidden>
   <div class="top"><span class="no" id="tutNo">1/12</span><h3 id="tutT"></h3><span class="cnt" id="tutCnt"></span></div>
   <p id="tutD"></p>
@@ -282,7 +334,7 @@ body.no-combo #combo{display:none}
 <div class="overlay" id="over" hidden>
   <div class="card result">
     <p class="why" id="why">ビルに激突</p>
-    <p class="sub">配達失敗 ・ SCORE</p>
+    <p class="sub">配達失敗 ・ <span id="overMode"></span>SCORE</p>
     <p class="big"><b id="final">0</b><span> pt</span></p>
     <p class="record" id="record" hidden>NEW RECORD!</p>
     <p class="best" id="best"></p>
@@ -505,7 +557,7 @@ function rebuildCity(px, pz) {
 }
 
 // ---------- floating items ----------
-const ITEM_POOL = 40, collected = new Set(), activeItems = [];
+const ITEM_POOL = 160, collected = new Set(), activeItems = [];
 const itemGeo = new THREE.OctahedronGeometry(2.6);
 const itemMat = { blue: new THREE.MeshBasicMaterial({ color: 0x4fa8ff }), gold: new THREE.MeshBasicMaterial({ color: 0xffd23a }) };
 const GOLD_SHARE = 0.45, SPIN_BOOST = 1.2;
@@ -519,7 +571,7 @@ for (let n = 0; n < ITEM_POOL; n++) {
 function itemAt(i, j) {
   const ave = ((i % 4) + 4) % 4 === 0 || ((j % 4) + 4) % 4 === 0;
   const tk = tutItemKinds();                               // tutorial: none / only the kind being taught / both
-  if (!tk || !ave || rnd(i, j, 11) > (tk === true ? 0.235 : 0.45) || (Math.abs(i) <= 1 && j > -2)) return null;
+  if (!tk || !ave || rnd(i, j, 11) > (tk === true ? (mode === 'dopa' ? 0.94 : 0.235) : 0.45) || (Math.abs(i) <= 1 && j > -2)) return null;
   return { key: i + ',' + j, x: i * CELL + (rnd(i, j, 12) - 0.5) * 16, z: j * CELL + (rnd(i, j, 13) - 0.5) * 16,
            y: 26 + rnd(i, j, 14) * 36, kind: tk !== true ? tk : rnd(i, j, 15) < GOLD_SHARE ? 'gold' : 'blue' };
 }
@@ -654,7 +706,11 @@ const UP = new THREE.Vector3(0, 1, 0);
 // ---------- state ----------
 const pos = new THREE.Vector3(), vel = new THREE.Vector3(), heading = new THREE.Vector3(0, 0, -1), camHead = new THREE.Vector3(0, 0, -1);
 let state = 'title', best = 0, maxDist = 0, time = 0, lastSide = null;
-try { best = +localStorage.getItem('wc-best-pt') || 0; } catch (e) {}
+let mode = 'normal';                                      // 'normal' | 'dopa' (items x4), each keeps its own best
+const BEST_KEY = { normal: 'wc-best-pt', dopa: 'wc-best-pt-dopa' }, bests = { normal: 0, dopa: 0 };
+try { for (const m in BEST_KEY) bests[m] = +localStorage.getItem(BEST_KEY[m]) || 0; } catch (e) {}
+best = bests.normal;
+function showBests() { $('bestN').textContent = bests.normal.toLocaleString(); $('bestD').textContent = bests.dopa.toLocaleString(); }
 const held = { L: false, R: false };
 
 function reset() {
@@ -771,7 +827,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'ArrowLeft' || e.key === 'a') { keys.L = true; refreshHeld(); }
   if (e.key === 'ArrowRight' || e.key === 'd') { keys.R = true; refreshHeld(); }
   if ((e.key === ' ' || e.key === 'Enter') && state === 'tutready') tutBegin();
-  else if ((e.key === ' ' || e.key === 'Enter') && state !== 'play' && $('tutDone').hidden) startGame();
+  else if ((e.key === ' ' || e.key === 'Enter') && state !== 'play' && $('tutDone').hidden && $('rules').hidden) startGame();
   const jk = { w: 'up', s: 'down', q: 'left', e: 'right' }[e.key]; if (jk) fireJet(jk);
 });
 window.addEventListener('keyup', e => {
@@ -864,7 +920,8 @@ function endFlip() {
   burst(pos, Math.min(140, 60 + n * 20), 12 + n * 2); shakeT = Math.max(shakeT, 0.3);
 }
 function pop(text) { $('pop').textContent = text; $('pop').style.opacity = 1; popT = 0.7; }
-function startGame() {
+function startGame(m) {
+  if (typeof m === 'string') mode = m;
   tutEnd();
   $('title').hidden = true; $('over').hidden = true; reset(); state = 'play';
   touches.clear(); held.L = held.R = false; keys.L = keys.R = false; mouseSide = null;
@@ -879,8 +936,10 @@ function gameOver(why) {
   if (flip && flip.shown) { $('spinPts').textContent = '失敗…'; $('spin').classList.add('fail'); spinHide = 0.9; }
   flip = null; body.rotation.x = 0;
   burst(pos, 80, 12); shakeT = 0.4; flashScreen('rgba(255,40,80,.3)');
+  best = bests[mode];
   const d = Math.floor(score), prevBest = best, isNew = d > prevBest && d > 0;
-  if (isNew) { best = d; try { localStorage.setItem('wc-best-pt', String(best)); } catch (e) {} }
+  if (isNew) { best = bests[mode] = d; try { localStorage.setItem(BEST_KEY[mode], String(best)); } catch (e) {} }
+  $('overMode').textContent = mode === 'dopa' ? 'ドパガキ ・ ' : '';
   $('why').textContent = why;
   $('record').hidden = !isNew;
   $('best').textContent = isNew ? (prevBest > 0 ? '前のベスト ' + prevBest.toLocaleString() + ' pt' : '初めての記録') : 'ベスト ' + best.toLocaleString() + ' pt（あと ' + (best - d).toLocaleString() + ' pt）';
@@ -903,8 +962,11 @@ function gameOver(why) {
       $('final').textContent = Math.round(d * e).toLocaleString(); if (k < 1 && state === 'over') requestAnimationFrame(tick); })(t0);
   }, 450);
 }
-$('start').addEventListener('click', startGame);
-$('retry').addEventListener('click', startGame);
+$('start').addEventListener('click', () => startGame('normal'));
+$('startDopa').addEventListener('click', () => { startGame('dopa'); pop('ドパガキモード！'); });
+$('rulesBtn').addEventListener('click', () => { $('title').hidden = true; $('rules').hidden = false; });
+$('rulesClose').addEventListener('click', () => { $('rules').hidden = true; $('title').hidden = false; });
+$('retry').addEventListener('click', () => startGame());
 $('toTitle').addEventListener('click', () => toTitle());
 
 // ---------- tutorial ----------
@@ -997,16 +1059,16 @@ function tutFinish() {
 }
 function tutEnd() { tut = null; $('tut').hidden = true; $('tutDone').hidden = true; $('tutReady').hidden = true; document.body.classList.remove('tutorial', 'no-combo'); }
 function startTutorial() {
-  startGame(); tut = { i: 0, s: { v: 0 }, clear: 0 }; document.body.classList.add('tutorial'); tutSet(0);
+  startGame('normal'); tut = { i: 0, s: { v: 0 }, clear: 0 }; document.body.classList.add('tutorial'); tutSet(0);
 }
-function toTitle() { tutEnd(); $('over').hidden = true; reset(); state = 'title'; $('title').hidden = false; $('spin').hidden = true; $('feed').textContent = ''; }
+function toTitle() { tutEnd(); showBests(); $('over').hidden = true; reset(); state = 'title'; $('title').hidden = false; $('spin').hidden = true; $('feed').textContent = ''; }
 const tapBtn = (id, fn) => { const el = $(id); el.addEventListener('click', fn); for (const ev of ['touchstart', 'mousedown']) el.addEventListener(ev, e => e.stopPropagation()); };
 tapBtn('tutStart', startTutorial);
 tapBtn('tutSkip', () => { if (tut && !tut.clear) tutSet(tut.i + 1); });
 tapBtn('tutReady', tutBegin);
 tapBtn('trQuit', e => { e.stopPropagation(); toTitle(); });
 tapBtn('tutQuit', toTitle);
-tapBtn('tutGo', () => { tutEnd(); startGame(); });
+tapBtn('tutGo', () => { tutEnd(); startGame('normal'); });
 tapBtn('tutTitle', toTitle);
 
 // tuning panel
@@ -1020,7 +1082,7 @@ $('tReset').addEventListener('click', () => { Object.assign(P, DEFAULTS); syncTu
 function setTune(open) { $('tune').hidden = !open; $('paused').hidden = !open; }
 $('gear').addEventListener('click', () => setTune($('tune').hidden));
 $('tClose').addEventListener('click', () => setTune(false));
-syncTune();
+syncTune(); showBests();
 // jet pad: the whole circle is the button; the quadrant you press picks the direction
 function jetPress(x, y) {
   const r = $('jet').getBoundingClientRect(), dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2);
