@@ -89,6 +89,17 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #score.bump{animation:bump .4s cubic-bezier(.2,1.8,.4,1)}
 @keyframes bump{0%{transform:scale(1.6);color:var(--amber)}100%{transform:none}}
 #score{display:inline-block;transform-origin:left center}
+#jet{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);width:128px;height:128px;margin-left:-64px;border-radius:50%;
+  --cd:1;background:conic-gradient(rgba(255,255,255,.85) calc(var(--cd) * 360deg), rgba(255,255,255,.12) 0);padding:4px;touch-action:none}
+#jet::before{content:"";position:absolute;inset:4px;border-radius:50%;background:rgba(10,7,22,.88)}
+#jet .jd{position:absolute;width:44px;height:44px;border:0;border-radius:12px;background:rgba(255,255,255,.14);color:#fff;font:700 18px var(--display);
+  display:grid;place-items:center;touch-action:none}
+#jet .up{left:42px;top:6px} #jet .down{left:42px;bottom:6px} #jet .left{left:6px;top:42px} #jet .right{right:6px;top:42px}
+#jet .jd:active{background:#fff;color:var(--night)}
+#jet .jd:focus-visible{outline:2px solid var(--cyan)}
+#jetCore{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:700 13px var(--display);color:#fff;letter-spacing:.06em;font-variant-numeric:tabular-nums;pointer-events:none}
+#jet.cool .jd{opacity:.3}
+#jet.ready{box-shadow:0 0 18px rgba(255,255,255,.5)}
 .pts{margin:0;font-size:12px;line-height:1.6;color:var(--dim)}
 #feed{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 76px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
 #feed div{font:700 24px var(--display);color:var(--amber);white-space:nowrap;-webkit-text-stroke:1px rgba(0,0,0,.5);text-shadow:0 0 12px rgba(255,181,58,.9),0 0 30px rgba(255,63,180,.6);animation:feed 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
@@ -119,6 +130,13 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 </div>
 <div class="pads"><div class="pad L" id="padL">L</div><div class="pad R" id="padR">R</div>
   <span class="len L" id="lenL" hidden></span><span class="len R" id="lenR" hidden></span></div>
+<div id="jet" aria-label="ジェット">
+  <button type="button" class="jd up" data-dir="up" aria-label="上へジェット">▲</button>
+  <button type="button" class="jd left" data-dir="left" aria-label="左へジェット">◀</button>
+  <span id="jetCore">JET</span>
+  <button type="button" class="jd right" data-dir="right" aria-label="右へジェット">▶</button>
+  <button type="button" class="jd down" data-dir="down" aria-label="下へジェット">▼</button>
+</div>
 <div id="feed"></div>
 <div id="flash"></div>
 <div id="spin" hidden><b id="spinN">1</b><small>回転</small><em id="spinPts">+200</em></div>
@@ -147,7 +165,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
       <div class="r"><strong>右半分 ▶</strong>押すと右のビルにワイヤー。離すとワイヤーが外れる</div>
     </div>
     <p class="tip">振り子の<em>一番下を少し過ぎたところ</em>で離すと大きく前へ飛ぶ。粘りすぎるとビルに激突、早すぎると失速。刺したまま<em>指を上にスライド</em>すると巻き取って、振りが小さく速くなる。地面かビルに当たったら配達失敗。</p>
-    <p class="pts">1m = 10pt ／ 空中アイテム 500・1000pt ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 200〜800pt（大ジャンプで完全に回りきった分だけ）</p>
+    <p class="pts">1m = 10pt ／ 空中アイテム 500・1000pt ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 1回転100pt・上限なし（完全に回りきった分だけ）／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
     <button class="go" id="start" type="button">スタート</button>
   </div>
 </div>
@@ -171,6 +189,9 @@ const DEFAULTS = { G: 32, PUMP: 5, RANGE: 90, MINSPD: 16, SIDE: 0.2, TURN: 18 };
 const P = Object.assign({}, DEFAULTS);
 try { Object.assign(P, JSON.parse(localStorage.getItem('wc-tune') || '{}')); } catch (e) {}
 const nrm = new THREE.Vector3(), tang = new THREE.Vector3(), REEL_SPEED = 14, REEL_PER_PX = 0.05, RUN_SPEED = 20, JUMP_V = 9, FOOT = 0.9;
+const SPIN_PTS = 100, JET_V = 22, JET_CD = 10;
+let jetCD = 0, jetT = 0;
+const jetDir = new THREE.Vector3();
 let onRoof = null, flip = null, score = 0, pathDist = 0, nearCD = 0, lastNear = null;
 const WHITE = new THREE.Color(0xffffff);
 const CELL = 36, VIEW_CELLS = 8, MAXV = 55, REEL = 1.5, AIM_FWD = 45, AIM_UP = 30;
@@ -354,6 +375,41 @@ function flashScreen(color) {
   const el = document.getElementById('flash'); el.style.background = color;
   el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
 }
+const jetCone = new THREE.Mesh(new THREE.ConeGeometry(0.9, 4, 10, 1, true), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+scene.add(jetCone);
+function jetEmit(n) {
+  for (let q = 0; q < n; q++) {
+    const k = spNext; spNext = (spNext + 1) % SPARKS;
+    spPos[k * 3] = pos.x + (Math.random() - 0.5) * 0.6; spPos[k * 3 + 1] = pos.y + 0.2 + (Math.random() - 0.5) * 0.6; spPos[k * 3 + 2] = pos.z + (Math.random() - 0.5) * 0.6;
+    const v = 18 + Math.random() * 14;
+    spVel[k * 3] = vel.x - jetDir.x * v + (Math.random() - 0.5) * 5; spVel[k * 3 + 1] = vel.y - jetDir.y * v + (Math.random() - 0.5) * 5 + 9; spVel[k * 3 + 2] = vel.z - jetDir.z * v + (Math.random() - 0.5) * 5;
+    spCol[k * 3] = spCol[k * 3 + 1] = spCol[k * 3 + 2] = 1; spLife[k] = 0.35 + Math.random() * 0.35;
+  }
+}
+function fireJet(dir) {
+  if (state !== 'play' || !$('tune').hidden || jetCD > 0) return;
+  rightV.set(-heading.z, 0, heading.x);
+  if (dir === 'up') jetDir.set(0, 1, 0); else if (dir === 'down') jetDir.set(0, -1, 0);
+  else jetDir.copy(rightV).multiplyScalar(dir === 'right' ? 1 : -1);
+  if (dir === 'up' && vel.y < 0) vel.y *= 0.3;           // cancel part of the fall so the boost is felt
+  vel.addScaledVector(jetDir, JET_V);
+  if (onRoof && dir === 'up') onRoof = null;
+  jetCD = JET_CD; jetT = 0.4; shakeT = Math.max(shakeT, 0.2);
+  jetEmit(60); flashScreen('rgba(255,255,255,.3)');
+}
+function updateJet(dt, now, paused) {
+  if (state === 'play' && !paused) jetCD = Math.max(0, jetCD - dt);
+  const el = $('jet'); el.style.setProperty('--cd', String(1 - jetCD / JET_CD));
+  el.classList.toggle('cool', jetCD > 0); el.classList.toggle('ready', jetCD <= 0);
+  $('jetCore').textContent = jetCD > 0 ? Math.ceil(jetCD) + 's' : 'JET';
+  el.hidden = state !== 'play';
+  if (jetT > 0 && !paused) {
+    jetT -= dt; jetEmit(6);
+    jetCone.position.copy(pos).addScaledVector(jetDir, -2.4); jetCone.position.y += 0.2;
+    jetCone.quaternion.setFromUnitVectors(UP, tmp.copy(jetDir));
+    jetCone.material.opacity = Math.max(0, jetT / 0.4) * 0.9; jetCone.scale.set(1, 1 + Math.random() * 0.4, 1);
+  } else jetCone.material.opacity = 0;
+}
 function retrigger(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 
 // ---------- courier ----------
@@ -396,7 +452,7 @@ const held = { L: false, R: false };
 function reset() {
   pos.set(0, 50, 8); vel.set(0, 7, -24); heading.set(0, 0, -1); camHead.copy(heading);
   maxDist = 0; time = 0; onRoof = null; flip = null; score = 0; pathDist = 0; nearCD = 0; lastNear = null;
-  body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0;
+  body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0; jetCD = 0; jetT = 0;
   for (const s of ['L', 'R']) { ropes[s].reelT = 0; }
   for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; }
   builtCell = null; rebuildCity(pos.x, pos.z);
@@ -496,6 +552,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'ArrowLeft' || e.key === 'a') { keys.L = true; refreshHeld(); }
   if (e.key === 'ArrowRight' || e.key === 'd') { keys.R = true; refreshHeld(); }
   if ((e.key === ' ' || e.key === 'Enter') && state !== 'play') startGame();
+  const jk = { w: 'up', s: 'down', q: 'left', e: 'right' }[e.key]; if (jk) fireJet(jk);
 });
 window.addEventListener('keyup', e => {
   if (e.key === 'ArrowLeft' || e.key === 'a') { keys.L = false; refreshHeld(); }
@@ -520,7 +577,7 @@ function bonus(pts, label, gold) {
 let spinHide = 0;
 function spinTick(n) {
   const el = $('spin'); el.hidden = false; el.classList.remove('win', 'fail');
-  $('spinN').textContent = n; $('spinPts').textContent = '+' + Math.min(800, 200 * n) + '?';
+  $('spinN').textContent = n; $('spinPts').textContent = '+' + SPIN_PTS * n + '?';
   retrigger(el, 'tick'); spinHide = 9;
   burst(pos, 40 + n * 20, 10 + n * 2); shakeT = Math.max(shakeT, 0.15 + n * 0.05);
   flashScreen(['rgba(53,242,255,.35)', 'rgba(255,63,180,.4)', 'rgba(255,181,58,.45)', 'rgba(255,255,255,.55)'][Math.min(3, n - 1)]);
@@ -531,7 +588,7 @@ function endFlip() {
   const n = Math.floor(f.ang / (Math.PI * 2));
   if (n < 1) return;
   if (f.t < 1.5) { $('spinPts').textContent = '滞空不足'; $('spin').classList.add('fail'); spinHide = 0.9; return; }
-  const pts = Math.min(800, 200 * n);
+  const pts = SPIN_PTS * n;
   $('spinPts').textContent = '成功！ +' + pts; retrigger($('spin'), 'win'); spinHide = 1.3;
   bonus(pts, n + '回転ジャンプ', n >= 3);
   burst(pos, 120 + n * 40, 16 + n * 3); shakeT = 0.5;
@@ -572,6 +629,11 @@ function setTune(open) { $('tune').hidden = !open; $('paused').hidden = !open; }
 $('gear').addEventListener('click', () => setTune($('tune').hidden));
 $('tClose').addEventListener('click', () => setTune(false));
 syncTune();
+for (const btn of document.querySelectorAll('#jet .jd')) {
+  const go = e => { e.preventDefault(); e.stopPropagation(); fireJet(btn.dataset.dir); };
+  btn.addEventListener('touchstart', go, { passive: false });
+  btn.addEventListener('mousedown', go);
+}
 
 // ---------- physics ----------
 function roofUnder(x, z) {
@@ -728,6 +790,7 @@ function frame(now) {
   if (state !== 'over') camera.position.lerp(camTarget, 1 - Math.exp(-7 * dt));
   camera.lookAt(look.copy(pos).addScaledVector(camHead, 9).add(tmp.set(0, 0.5, 0)));
   if (shakeT > 0) { shakeT = Math.max(0, shakeT - dt); const a = shakeT * 1.6; camera.position.x += (Math.random() - 0.5) * a; camera.position.y += (Math.random() - 0.5) * a; camera.rotation.z += (Math.random() - 0.5) * a * 0.05; }
+  updateJet(dt, now, paused);
   updateSparks(dt);
   if (spinHide > 0) { spinHide -= dt; if (spinHide <= 0) $('spin').hidden = true; }
   const sp = vel.length();
@@ -775,6 +838,6 @@ reset();
 requestAnimationFrame(frame);
 
 // test hook
-window.__wc = { step, findAnchor, attach, detach, rebuildCity, heading, get state() { return state; }, set state(v) { state = v; }, pos, vel, ropes, held, setHeld, startGame, P, get dist() { return maxDist; }, get score() { return score; }, get flip() { return flip; }, get onRoof() { return onRoof; }, activeItems };
+window.__wc = { step, findAnchor, attach, detach, rebuildCity, heading, get state() { return state; }, set state(v) { state = v; }, pos, vel, ropes, held, setHeld, startGame, P, get dist() { return maxDist; }, get score() { return score; }, get flip() { return flip; }, get onRoof() { return onRoof; }, fireJet, get jetCD() { return jetCD; }, activeItems };
 })();
 </script>
