@@ -76,7 +76,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #flash{position:fixed;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen}
 #flash.go{animation:flash .35s ease-out}
 @keyframes flash{0%{opacity:.75}100%{opacity:0}}
-#spin{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none;line-height:1}
+#spin{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none;line-height:1}
 #spin b{font:700 72px var(--display);color:#fff;-webkit-text-stroke:3px var(--magenta);text-shadow:0 0 16px var(--magenta)}
 #spin small{font:700 22px var(--body);color:var(--ink);letter-spacing:.2em;text-shadow:0 0 10px var(--cyan)}
 #spin em{font:700 26px var(--display);font-style:normal;color:var(--amber);margin-top:6px;text-shadow:0 0 14px rgba(255,181,58,.9)}
@@ -105,6 +105,15 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 @keyframes bump{0%{transform:scale(1.3);color:var(--amber)}100%{transform:none}}
 #mul{display:block;margin-top:6px;font:700 13px var(--display);font-style:normal;color:#ffd23a;text-shadow:0 0 8px rgba(255,210,58,.7);transform-origin:left center}
 #mul.bump{animation:bump .4s cubic-bezier(.2,1.8,.4,1)}
+#combo{margin-top:8px;display:grid;grid-template-columns:auto auto 1fr;align-items:baseline;column-gap:6px;width:150px;transform-origin:left center}
+#combo .lbl{font:700 11px var(--display);letter-spacing:.16em;color:var(--cyan)}
+#combo b{font:700 26px var(--display);font-variant-numeric:tabular-nums;color:#fff;text-shadow:0 0 10px var(--cyan)}
+#comboMax{font:600 12px var(--display);color:var(--dim)}
+#combo i{grid-column:1 / -1;height:5px;margin-top:3px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden}
+#combo u{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--magenta));transform-origin:left center}
+#combo.off{opacity:.35}
+#combo.full b{color:#ffd23a;text-shadow:0 0 12px #ffd23a}
+#combo.bump{animation:bump .35s cubic-bezier(.2,1.8,.4,1)}
 #score{display:inline-block;transform-origin:left center}
 #jet{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);width:150px;height:150px;margin-left:-75px;border-radius:50%;
   --cd:1;background:conic-gradient(from -90deg,#fff calc(var(--cd) * 360deg),rgba(255,255,255,.1) 0);padding:3px;touch-action:none;cursor:pointer;
@@ -129,8 +138,8 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #jet.ready{box-shadow:0 0 22px rgba(255,255,255,.45)}
 #jet.ready #jetCore{background:#fff;color:var(--night);box-shadow:0 0 16px #fff}
 .pts{margin:0;font-size:12px;line-height:1.6;color:var(--dim)}
-#feed{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 76px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
-#feed div{font:700 20px var(--display);color:var(--amber);white-space:nowrap;-webkit-text-stroke:1px rgba(0,0,0,.5);text-shadow:0 0 12px rgba(255,181,58,.9),0 0 30px rgba(255,63,180,.6);animation:feed 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
+#feed{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
+#feed div{font:700 17px var(--display);color:var(--amber);white-space:nowrap;-webkit-text-stroke:1px rgba(0,0,0,.5);text-shadow:0 0 12px rgba(255,181,58,.9),0 0 30px rgba(255,63,180,.6);animation:feed 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
 #feed div.gold{color:#ffe066;font-size:26px;text-shadow:0 0 14px #ffd23a,0 0 40px #ff3fb4}
 @keyframes feed{0%{opacity:0;transform:scale(1.5) rotate(-3deg)}18%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-30px) scale(.9)}}
 @media (prefers-reduced-motion:reduce){#feed div,#spin b,#spin em,#score.bump,#flash.go{animation:none}}
@@ -153,7 +162,8 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 <canvas id="game"></canvas>
 
 <div class="hud">
-  <div class="stat"><b id="score">0</b><small>pt · <span id="dist">0</span> m</small><em id="mul" hidden></em></div>
+  <div class="stat"><b id="score">0</b><small>pt · <span id="dist">0</span> m</small><em id="mul" hidden></em>
+    <div id="combo" class="off"><span class="lbl">COMBO</span><b id="comboN">0</b><span id="comboMax">/ 10</span><i><u id="comboBar"></u></i></div></div>
   <div class="stat r"><b id="spd">0</b><small>km/h</small><br><button id="gear" type="button">調整</button></div>
 </div>
 <div class="pads"><div class="pad L" id="padL">L</div><div class="pad R" id="padR">R</div>
@@ -191,7 +201,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
       <div class="r"><strong>右半分 ▶</strong>押すと右のビルにワイヤー。離すとワイヤーが外れる</div>
     </div>
     <p class="tip">振り子の<em>一番下を少し過ぎたところ</em>で離すと大きく前へ飛ぶ。粘りすぎるとビルに激突、早すぎると失速。刺したまま<em>指を上にスライド</em>すると巻き取って、振りが小さく速くなる。地面かビルに当たったら配達失敗。</p>
-    <p class="pts">1m = 10pt ／ 青アイテム 1000pt ／ 金アイテムは取るたび回転スピードUP ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 1回転100pt・上限なし（GOOD→…→UNBELIEVABLE）／ ビルの間を両側すれすれ Wスレスレ 1000pt／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
+    <p class="pts">1m = 10pt ／ 青アイテム 1000pt ／ 金アイテムは取るたび回転スピード×1.2・加速×1.1 ／ ボーナスはコンボ数×5%上乗せ（青アイテムでコンボ上限+5・時間+1秒） ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 1回転100pt・上限なし（GOOD→…→UNBELIEVABLE）／ ビルの間を両側すれすれ Wスレスレ 1000pt／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
     <button class="go" id="start" type="button">スタート</button>
   </div>
 </div>
@@ -214,7 +224,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 const DEFAULTS = { G: 32, PUMP: 5, RANGE: 90, MINSPD: 16, SIDE: 0.2, TURN: 18 };
 const P = Object.assign({}, DEFAULTS);
 try { Object.assign(P, JSON.parse(localStorage.getItem('wc-tune') || '{}')); } catch (e) {}
-const nrm = new THREE.Vector3(), tang = new THREE.Vector3(), REEL_SPEED = 14, REEL_PER_PX = 0.05, RUN_SPEED = 20, JUMP_V = 9, FOOT = 0.9;
+const nrm = new THREE.Vector3(), tang = new THREE.Vector3(), REEL_SPEED = 14, REEL_PER_PX = 0.05, RUN_SPEED = 20, JUMP_V = 15, FOOT = 0.9;
 const W_NEAR = 9, W_WINDOW = 0.7;
 let wCD = 0, wL = -9, wR = -9;
 const SPIN_RANKS = ['GOOD', 'NICE', 'GREAT', 'EXCELLENT', 'FANTASTIC', 'AMAZING', 'UNBELIEVABLE'];
@@ -368,7 +378,7 @@ function pickItems() {
     if (!a.g.visible) continue;
     if (a.g.position.distanceToSquared(pos) < 56) {
       a.g.visible = false; collected.add(a.it.key);
-      if (a.it.kind === 'blue') bonus(1000, 'アイテム');
+      if (a.it.kind === 'blue') { bonus(1000, 'アイテム'); comboMax += 5; comboTime += 1; comboT = comboTime; }
       else goldPickup();
     }
   }
@@ -485,7 +495,7 @@ const held = { L: false, R: false };
 function reset() {
   pos.set(0, 50, 8); vel.set(0, 7, -24); heading.set(0, 0, -1); camHead.copy(heading);
   maxDist = 0; time = 0; wL = wR = -9; wCD = 0; onRoof = null; flip = null; score = 0; pathDist = 0; nearCD = 0; lastNear = null;
-  body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0; jetCD = 0; jetT = 0; spinMul = 1; $('mul').hidden = true;
+  body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0; jetCD = 0; jetT = 0; spinMul = 1; $('mul').hidden = true; combo = 0; comboT = 0; comboMax = 10; comboTime = 3; accelMul = 1;
   for (const s of ['L', 'R']) { ropes[s].reelT = 0; }
   for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; }
   builtCell = null; rebuildCity(pos.x, pos.z);
@@ -597,8 +607,11 @@ const $ = id => document.getElementById(id);
 let popT = 0;
 function bonus(pts, label, gold) {
   if (state !== 'play') return;
-  score += pts;
-  const d = document.createElement('div'); d.textContent = label + ' +' + pts; if (gold) d.className = 'gold';
+  const rate = 1 + combo * 0.05;                         // combo bonus: +5% per current combo
+  const total = Math.round(pts * rate);
+  score += total;
+  const d = document.createElement('div'); d.textContent = label + ' +' + total + (combo > 0 ? '（' + combo + 'コンボ ×' + rate.toFixed(2) + '）' : ''); if (gold) d.className = 'gold';
+  comboHit();
   $('feed').appendChild(d); setTimeout(() => d.remove(), 1400);
   while ($('feed').children.length > 4) $('feed').firstChild.remove();
   burst(pos, Math.min(90, 12 + pts / 10), 7 + pts / 120);
@@ -607,16 +620,37 @@ function bonus(pts, label, gold) {
   retrigger($('score'), 'bump');
 }
 let spinHide = 0;
+let combo = 0, comboT = 0, comboMax = 10, comboTime = 3, accelMul = 1;
+function comboHit() {
+  if (state !== 'play') return;
+  combo = Math.min(comboMax, combo + 1); comboT = comboTime;
+  retrigger($('combo'), 'bump');
+}
+function updateCombo(dt, paused) {
+  if (state === 'play' && !paused && combo > 0) { comboT -= dt; if (comboT <= 0) { combo = 0; comboT = 0; } }
+  const el = $('combo');
+  el.classList.toggle('off', combo === 0);
+  $('comboN').textContent = combo; $('comboMax').textContent = '/ ' + comboMax;
+  $('comboBar').style.transform = 'scaleX(' + (combo > 0 ? comboT / comboTime : 0) + ')';
+  el.classList.toggle('full', combo >= comboMax);
+}
+function showMul() {
+  const parts = [];
+  if (spinMul > 1.001) parts.push('回転 ×' + spinMul.toFixed(2));
+  if (accelMul > 1.001) parts.push('加速 ×' + accelMul.toFixed(2));
+  $('mul').textContent = parts.join(' ・ '); $('mul').hidden = !parts.length; retrigger($('mul'), 'bump');
+}
 function goldPickup() {
   spinMul *= SPIN_BOOST;
   if (flip) flip.rate *= SPIN_BOOST;                      // a jump already in the air speeds up too
   const d = document.createElement('div'); d.className = 'gold'; d.textContent = '回転スピードUP ×' + spinMul.toFixed(2);
   $('feed').appendChild(d); setTimeout(() => d.remove(), 1400);
   burst(pos, 50, 10); shakeT = Math.max(shakeT, 0.12); flashScreen('rgba(255,210,58,.22)');
-  $('mul').textContent = '回転 ×' + spinMul.toFixed(2); $('mul').hidden = false; retrigger($('mul'), 'bump');
+  accelMul *= 1.1; showMul(); comboHit();
 }
 function spinTick(n) {
   const el = $('spin'); el.hidden = false; el.classList.remove('win', 'fail');
+  comboHit();
   const lv = Math.min(7, n);
   $('spinN').textContent = n; $('spinPts').textContent = '+' + SPIN_PTS * n + '?';
   $('spinRank').textContent = SPIN_RANKS[lv - 1] + (lv === 7 ? '!!' : lv >= 4 ? '!' : '');
@@ -712,7 +746,7 @@ function step(dt) {
   vel.y -= P.G * dt;
   if (attached) {
     const sp = vel.length();
-    if (sp > 0.1) vel.addScaledVector(vel, (P.PUMP * dt) / sp);
+    if (sp > 0.1) vel.addScaledVector(vel, (P.PUMP * accelMul * dt) / sp);
     // steer toward the held side (deg/s)
     const th = ((ropes.L.on ? 1 : 0) - (ropes.R.on ? 1 : 0)) * P.TURN * Math.PI / 180 * dt;
     if (th) { const c = Math.cos(th), s = Math.sin(th), x = vel.x, z = vel.z; vel.x = x * c + z * s; vel.z = -x * s + z * c; }
@@ -869,6 +903,7 @@ function frame(now) {
     $('spd').textContent = Math.round(sp * 3.6);
     $('warn').style.opacity = pos.y < 12 ? (Math.sin(now / 80) > 0 ? 1 : 0.3) : 0;
   } else $('warn').style.opacity = 0;
+  updateCombo(dt, paused);
   if (popT > 0) { popT -= dt; if (popT <= 0) $('pop').style.opacity = 0; }
 
   // screen-space aim reticles: where a tap would fire the wire right now
