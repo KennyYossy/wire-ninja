@@ -1,4 +1,4 @@
-<title>Wire Courier</title>
+<title>Wire Ninja</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=M+PLUS+1p:wght@500;700&display=swap">
@@ -190,7 +190,9 @@ body.no-combo #combo{display:none}
 .go.dopa{background:linear-gradient(90deg,#35f2ff,#ff3fb4,#ffd23a);color:#140a24;box-shadow:0 0 22px rgba(255,63,180,.55)}
 .go small{display:block;font:700 11px var(--body);letter-spacing:.1em;opacity:.8;margin-top:2px}
 .row2{display:flex;gap:10px}.row2 .ghost,.row2 .go{flex:1;padding:11px 8px}
-.go.locked{filter:grayscale(.85) brightness(.6);animation:none;box-shadow:none}
+.go.locked,.go.dopa.locked{background:#2a2438;color:#8a8399;animation:none;box-shadow:none;-webkit-text-stroke:0;text-shadow:none}
+.go.locked small{letter-spacing:0;font-size:10px;white-space:nowrap}
+.bests .locked{filter:grayscale(1);opacity:.5;text-shadow:none;box-shadow:none;animation:none}
 .go.locked.shake{animation:lockshake .3s}
 @keyframes lockshake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .go.super{background:linear-gradient(90deg,#ffd23a,#ff3fb4,#9b6bff,#35f2ff);background-size:300% 100%;animation:superbg 2.4s linear infinite;box-shadow:0 0 26px rgba(255,210,58,.6)}
@@ -279,7 +281,7 @@ body.no-combo #combo{display:none}
 <div class="overlay" id="title">
   <div class="card">
     <p class="sub">NEON NIGHT SWING</p>
-    <h1 class="logo">WIRE<br>COURIER</h1>
+    <h1 class="logo">WIRE<br>NINJA</h1>
     <div class="bests"><div><small>ベスト</small><span class="sc" id="bestN"></span></div><div class="dopa"><small>ドパガキ</small><span class="sc" id="bestD"></span></div><div class="dopa super"><small>超ドパガキ</small><span class="sc" id="bestS"></span></div><div class="dopa kyoku"><small>極ドパガキ</small><span class="sc" id="bestK"></span></div></div>
     <div class="modes">
       <button class="go" id="start" type="button">スタート</button>
@@ -1074,6 +1076,7 @@ function gameOver(why) {
 $('start').addEventListener('click', () => startGame('normal'));
 // each ドパガキ mode unlocks after 10 runs of the mode before it (run counts kept in localStorage)
 const UNLOCK = { dopa: 'normal', super: 'dopa', kyoku: 'super' }, UNLOCK_RUNS = 10;
+const BEST_TILE = { dopa: 'bestD', super: 'bestS', kyoku: 'bestK' };
 const MODE_BTN = { dopa: ['startDopa', 'アイテム5倍'], super: ['startSuper', 'アイテム10倍'], kyoku: ['startKyoku', '金20倍・青銀10倍'] };
 let plays = { normal: 0, dopa: 0, super: 0, kyoku: 0 };
 try { Object.assign(plays, JSON.parse(localStorage.getItem('wc-plays') || '{}')); } catch (e) {}
@@ -1083,7 +1086,9 @@ function showLocks() {
   for (const m in MODE_BTN) {
     const [id, sub] = MODE_BTN[m], el = $(id), ok = unlocked(m), prev = UNLOCK[m];
     el.classList.toggle('locked', !ok); el.setAttribute('aria-disabled', String(!ok));
-    el.querySelector('small').textContent = ok ? sub : '🔒 ' + (MODE_NAME[prev] || '通常') + 'をあと' + (UNLOCK_RUNS - plays[prev]) + '回';
+    el.firstChild.textContent = ok ? MODE_NAME[m] : '？？？';
+    const tile = $(BEST_TILE[m]).parentNode; tile.classList.toggle('locked', !ok); tile.querySelector('small').textContent = ok ? MODE_NAME[m] : '？？？';
+    el.querySelector('small').textContent = ok ? sub : '🔒 ' + (unlocked(prev) ? (MODE_NAME[prev] || '通常') : '？？？') + 'をあと' + (UNLOCK_RUNS - plays[prev]) + '回';
   }
 }
 const tryMode = (m, msg) => { if (!unlocked(m)) { retrigger($(MODE_BTN[m][0]), 'shake'); return; } startGame(m); pop(msg); };
