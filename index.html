@@ -202,6 +202,7 @@ body.no-combo #combo{display:none}
 #feed{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
 #feed div{font:700 17px var(--display);color:var(--amber);white-space:nowrap;-webkit-text-stroke:1px rgba(0,0,0,.5);text-shadow:0 0 12px rgba(255,181,58,.9),0 0 30px rgba(255,63,180,.6);animation:feed 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
 #feed div.blue{color:#8fc9ff;text-shadow:0 0 12px #4fa8ff,0 0 26px #4fa8ff}
+#feed div.jetup{color:#ffffff;font-size:20px;text-shadow:0 0 12px #9ad8ff,0 0 26px #ffffff}
 #feed div.accel{color:#ffb070;font-size:22px;text-shadow:0 0 12px #ff7a2a,0 0 30px #ffd23a}
 #feed div.gold{color:#ffe066;font-size:26px;text-shadow:0 0 14px #ffd23a,0 0 40px #ff3fb4}
 @keyframes feed{0%{opacity:0;transform:scale(1.5) rotate(-3deg)}18%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-30px) scale(.9)}}
@@ -296,7 +297,7 @@ body.no-combo #combo{display:none}
     <dl>
       <dt>移動</dt><dd>1m = 10pt（どの方向でも）</dd>
       <dt>青アイテム</dt><dd>1000pt ＋ コンボ上限+5・時間+1秒</dd>
-      <dt>金アイテム</dt><dd>回転スピード×1.2・加速×1.1（ずっと）</dd>
+      <dt>金アイテム</dt><dd>回転スピード×1.2・加速×1.1・ジェット時間×0.95（ずっと）</dd>
       <dt>すれすれ</dt><dd>ビルの横3m以内 200pt</dd>
       <dt>Wスレスレ</dt><dd>ビルの間を両側すれすれ 1000pt</dd>
       <dt>地面すれすれ</dt><dd>高さ4m未満 1500pt</dd>
@@ -655,6 +656,7 @@ function jetEmit(n) {
     spCol[k * 3] = spCol[k * 3 + 1] = spCol[k * 3 + 2] = 1; spLife[k] = 0.35 + Math.random() * 0.35;
   }
 }
+let jetMul = 1, jetMax = JET_CD;                         // gold items shorten the cooldown (x0.95 each)
 function fireJet(dir) {
   if (state !== 'play' || !$('tune').hidden || jetCD > 0 || !feat('jet')) return;
   rightV.set(-heading.z, 0, heading.x);
@@ -663,13 +665,13 @@ function fireJet(dir) {
   if (dir === 'up' && vel.y < 0) vel.y = 0;              // cancel the fall so the boost is felt
   vel.addScaledVector(jetDir, JET_V);
   if (onRoof && dir === 'up') onRoof = null;
-  jetCD = tut && TUT[tut.i].unlock === 'jet' ? 3 : JET_CD; jetT = 0.5;   // shorter wait while practising shakeT = Math.max(shakeT, 0.12);
+  jetCD = jetMax = tut && TUT[tut.i].unlock === 'jet' ? 3 : JET_CD * jetMul; jetT = 0.5;   // shorter wait while practising shakeT = Math.max(shakeT, 0.12);
   jetEmit(45); flashScreen('rgba(255,255,255,.15)');
   tutEvent('jet');
 }
 function updateJet(dt, now, paused) {
   if (state === 'play' && !paused) jetCD = Math.max(0, jetCD - dt);
-  const el = $('jet'); el.style.setProperty('--cd', String(1 - jetCD / JET_CD));
+  const el = $('jet'); el.style.setProperty('--cd', String(1 - jetCD / jetMax));
   el.classList.toggle('cool', jetCD > 0); el.classList.toggle('ready', jetCD <= 0);
   $('jetCore').textContent = jetCD > 0 ? Math.ceil(jetCD) + 's' : 'JET';
   el.hidden = state !== 'play' || !feat('jet');
@@ -726,7 +728,7 @@ const held = { L: false, R: false };
 function reset() {
   pos.set(0, 50, 8); vel.set(0, 7, -24); heading.set(0, 0, -1); camHead.copy(heading);
   maxDist = 0; time = 0; wL = wR = -9; wCD = 0; groundArmed = true; uHist.length = 0; uT = uSample = uCD = 0; pendingNear.length = 0; onRoof = null; flip = null; score = 0; pathDist = 0; nearCD = 0; lastNear = null;
-  body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0; jetCD = 0; jetT = 0; spinMul = 1; $('mul').hidden = true; combo = 0; comboT = 0; comboMax = 10; comboTime = 3; accelMul = 1; resetStats();
+  body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0; jetCD = 0; jetT = 0; spinMul = 1; $('mul').hidden = true; combo = 0; comboT = 0; comboMax = 10; comboTime = 3; accelMul = 1; jetMul = 1; jetMax = JET_CD; resetStats();
   for (const s of ['L', 'R']) { ropes[s].reelT = 0; ropes[s].snapped = false; ropes[s].t = 0; }
   for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; }
   builtCell = null; rebuildCity(pos.x, pos.z);
@@ -859,7 +861,7 @@ function bonus(pts, label, gold) {
   const d = document.createElement('div'); d.textContent = label + ' +' + total + (combo > 0 ? '（' + combo + 'コンボ ×' + rate.toFixed(2) + '）' : ''); if (gold) d.className = 'gold';
   comboHit();
   $('feed').appendChild(d); setTimeout(() => d.remove(), 1400);
-  while ($('feed').children.length > 4) $('feed').firstChild.remove();
+  while ($('feed').children.length > 5) $('feed').firstChild.remove();
   burst(pos, Math.min(90, 12 + pts / 10), 7 + pts / 120);
   shakeT = Math.max(shakeT, Math.min(0.3, 0.06 + pts / 2600));
   flashScreen(gold ? 'rgba(255,210,58,.3)' : pts >= 500 ? 'rgba(53,242,255,.22)' : 'rgba(255,63,180,.12)');
@@ -892,16 +894,18 @@ function showMul() {
   const parts = [];
   if (spinMul > 1.001) parts.push('回転 ×' + spinMul.toFixed(2));
   if (accelMul > 1.001) parts.push('加速 ×' + accelMul.toFixed(2));
+  if (jetMul < 0.999) parts.push('ジェット ' + (JET_CD * jetMul).toFixed(1) + '秒');
   $('mul').textContent = parts.join(' ・ '); $('mul').hidden = !parts.length; retrigger($('mul'), 'bump');
 }
 function goldPickup() {
   if (!feat('gold')) return;
   spinMul *= SPIN_BOOST;
   if (flip) flip.rate *= SPIN_BOOST;                      // a jump already in the air speeds up too
-  accelMul *= 1.1;
+  accelMul *= 1.1; jetMul *= 0.95;
   const d = document.createElement('div'); d.className = 'gold'; d.textContent = '回転スピードUP ×' + spinMul.toFixed(2);
   const d2 = document.createElement('div'); d2.className = 'accel'; d2.textContent = '加速力UP ×' + accelMul.toFixed(2);
-  $('feed').appendChild(d); $('feed').appendChild(d2); setTimeout(() => d.remove(), 1400); setTimeout(() => d2.remove(), 1600);
+  const d3 = document.createElement('div'); d3.className = 'jetup'; d3.textContent = 'ジェット時間 ×' + jetMul.toFixed(2) + '（' + (JET_CD * jetMul).toFixed(1) + '秒）';
+  $('feed').appendChild(d); $('feed').appendChild(d2); $('feed').appendChild(d3); setTimeout(() => d.remove(), 1400); setTimeout(() => d2.remove(), 1600); setTimeout(() => d3.remove(), 1800);
   burst(pos, 50, 10); shakeT = Math.max(shakeT, 0.12); flashScreen('rgba(255,210,58,.22)');
   showMul(); comboHit(); stats.golds++;
 }
