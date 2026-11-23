@@ -213,8 +213,8 @@ const DEFAULTS = { G: 32, PUMP: 5, RANGE: 90, MINSPD: 16, SIDE: 0.2, TURN: 18 };
 const P = Object.assign({}, DEFAULTS);
 try { Object.assign(P, JSON.parse(localStorage.getItem('wc-tune') || '{}')); } catch (e) {}
 const nrm = new THREE.Vector3(), tang = new THREE.Vector3(), REEL_SPEED = 14, REEL_PER_PX = 0.05, RUN_SPEED = 20, JUMP_V = 9, FOOT = 0.9;
-const W_NEAR = 4;
-let wCD = 0;
+const W_NEAR = 9, W_WINDOW = 0.7;
+let wCD = 0, wL = -9, wR = -9;
 const SPIN_RANKS = ['GOOD', 'NICE', 'GREAT', 'EXCELLENT', 'FANTASTIC', 'AMAZING', 'UNBELIEVABLE'];
 const SPIN_PTS = 100, JET_V = 36, JET_CD = 10;
 let jetCD = 0, jetT = 0;
@@ -478,7 +478,7 @@ const held = { L: false, R: false };
 
 function reset() {
   pos.set(0, 50, 8); vel.set(0, 7, -24); heading.set(0, 0, -1); camHead.copy(heading);
-  maxDist = 0; time = 0; onRoof = null; flip = null; score = 0; pathDist = 0; nearCD = 0; lastNear = null;
+  maxDist = 0; time = 0; wL = wR = -9; wCD = 0; onRoof = null; flip = null; score = 0; pathDist = 0; nearCD = 0; lastNear = null;
   body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0; jetCD = 0; jetT = 0;
   for (const s of ['L', 'R']) { ropes[s].reelT = 0; }
   for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; }
@@ -763,8 +763,10 @@ function nearMiss(dt) {
     if (side > 0.3) rightB = b; else if (side < -0.3) leftB = b;
     if (d < 3 && !single) single = b;
   }
-  if (leftB && rightB) {
-    if (wCD <= 0) { wCD = 2; nearCD = 1.2; lastNear = single || leftB; bonus(1000, 'Wスレスレ', true); }
+  if (leftB) wL = time; if (rightB) wR = time;
+  if (time - wL < W_WINDOW && time - wR < W_WINDOW) {
+    if (wCD <= 0) { wCD = 2; nearCD = 1.2; lastNear = single || leftB || rightB; wL = wR = -9; bonus(1000, 'Wスレスレ', true); return; }
+    if (leftB && rightB) return;
     return;
   }
   if (single && (single !== lastNear || nearCD <= 0)) { lastNear = single; nearCD = 1.2; bonus(200, 'すれすれ'); }
