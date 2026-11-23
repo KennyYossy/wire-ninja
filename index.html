@@ -523,7 +523,7 @@ function fireJet(dir) {
   if (dir === 'up' && vel.y < 0) vel.y = 0;              // cancel the fall so the boost is felt
   vel.addScaledVector(jetDir, JET_V);
   if (onRoof && dir === 'up') onRoof = null;
-  jetCD = JET_CD; jetT = 0.5; shakeT = Math.max(shakeT, 0.12);
+  jetCD = tut && TUT[tut.i].unlock === 'jet' ? 3 : JET_CD; jetT = 0.5;   // shorter wait while practising shakeT = Math.max(shakeT, 0.12);
   jetEmit(45); flashScreen('rgba(255,255,255,.15)');
   tutEvent('jet');
 }
@@ -841,7 +841,7 @@ const TUT = [
     on: (s, e) => { if (e.type === 'release') s.armed = true; if (e.type === 'attach') s.armed = false; }, tick: (s, dt) => s.armed && !onRoof ? dt : (s.v = 0, 0) },
   { t: '左右でつなぐ', d: '左右のワイヤーを<b>交互に</b>使って、落ちずに <b>300m</b> 進もう', goal: 300, tick: (s, dt) => Math.hypot(vel.x, vel.z) * dt },
   { t: '巻き取り', unlock: 'reel', d: 'ワイヤーを刺したまま<b>指を上にスライド</b>すると巻き取れる。<b>8m</b> 巻き取ろう', goal: 8, on: (s, e) => e.type === 'reel' ? e.amt : 0 },
-  { t: 'ジェット', unlock: 'jet', d: '中央下のジェットの<b>押した方向</b>に急加速する（10秒に1回）。どこかを押してみよう', goal: 1, on: (s, e) => e.type === 'jet' ? 1 : 0 },
+  { t: 'ジェット', unlock: 'jet', d: '中央下のジェットの<b>押した方向</b>に急加速する（本番は10秒に1回、練習中は3秒）。好きな方向に使ってみよう', goal: 2, count: true, on: (s, e) => e.type === 'jet' ? 1 : 0 },
   { t: 'すれすれ', unlock: 'near', d: 'ビルの横（3m以内）や地面の近く（4m未満）を<b>ぶつからずに</b>通り抜けよう', goal: 1, on: (s, e) => e.type === 'bonus' && NEAR_CATS.includes(e.label) ? 1 : 0 },
   { t: '青アイテム', unlock: 'blue', d: '大通りに浮かぶ<b>青いアイテム</b>を取ろう。1000pt ＋ コンボ上限+5・コンボ時間+1秒', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'blue' ? 1 : 0 },
   { t: '金アイテム', unlock: 'gold', d: '<b>金のアイテム</b>を取ろう。点数はないけど、取るたびに回転スピード×1.2・加速×1.1（そのゲーム中ずっと）', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'gold' ? 1 : 0 },
