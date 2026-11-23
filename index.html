@@ -251,7 +251,7 @@ body.no-combo #combo{display:none}
       <div class="r"><strong>右半分 ▶</strong>押すと右のビルにワイヤー。離すとワイヤーが外れる</div>
     </div>
     <p class="tip">振り子の<em>一番下を少し過ぎたところ</em>で離すと大きく前へ飛ぶ。粘りすぎるとビルに激突、早すぎると失速。刺したまま<em>指を上にスライド</em>すると巻き取って、振りが小さく速くなる。ワイヤーは<em>5秒で切れる</em>（切れる前に赤く点滅）。地面かビルに当たったら配達失敗。</p>
-    <p class="pts">1m = 10pt ／ 青アイテム 1000pt ／ 金アイテムは取るたび回転スピード×1.2・加速×1.1 ／ ボーナスはコンボ数×5%上乗せ（青アイテムでコンボ上限+5・時間+1秒） ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 100→200→300→500→800→1300…（GOOD→COOL→…→UNBELIEVABLE）／ ビルの間を両側すれすれ Wスレスレ 1000pt ／ 地面すれすれ（高さ4m未満）1500pt／ 進む向きが180°逆になったらバックフリップ 1000pt ／ ビルの間の橋の下をくぐると 1000pt（すれすれは別に加算）／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
+    <p class="pts">1m = 10pt ／ 青アイテム 1000pt ／ 金アイテムは取るたび回転スピード×1.2・加速×1.1 ／ ボーナスはコンボ数×5%上乗せ（青アイテムでコンボ上限+5・時間+1秒） ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 100→200→300→500→800→1300…（GOOD→COOL→…→UNBELIEVABLE）／ ビルの間を両側すれすれ Wスレスレ 1000pt ／ 地面すれすれ（高さ4m未満）1500pt／ 進む向きが180°逆になったらバックフリップ 1000pt ／ ビルの間の橋の下をくぐると 500〜2000pt（低い橋ほど高い・金＞ピンク＞水色）（すれすれは別に加算）／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
     <div class="btns"><button class="go" id="start" type="button">スタート</button><button class="ghost" id="tutStart" type="button">チュートリアル</button></div>
   </div>
 </div>
@@ -406,6 +406,14 @@ function cell(i, j) {
 // ---------- bridges ----------
 // now and then a skybridge spans an avenue between the two buildings that face it; fly under it for a bonus
 const bridgeCache = new Map(), MAX_BR = 120;
+// lower bridge = more points (+2000 at 12 m .. +500 at 60 m and up) and a hotter colour (cyan -> magenta -> gold)
+const WHITE_C = new THREE.Color(0xffffff);
+const BR_COL = [new THREE.Color(0x35f2ff), new THREE.Color(0xff3fb4), new THREE.Color(0xffd23a)];
+function bridgeValue(y0) {
+  const t = Math.min(1, Math.max(0, (60 - y0) / 48));
+  const col = t < 0.5 ? BR_COL[0].clone().lerp(BR_COL[1], t * 2) : BR_COL[1].clone().lerp(BR_COL[2], (t - 0.5) * 2);
+  return { pts: Math.round((500 + 1500 * t) / 100) * 100, col };
+}
 function bridge(i, j) {
   if (tut) return null;                                    // keep the tutorial city simple
   const key = i + ',' + j;
@@ -417,15 +425,15 @@ function bridge(i, j) {
     if (A && B) {
       const low = Math.min(A.h, B.h), W = 6, TH = 3;
       if (low > 32) {
-        const y0 = 12 + rnd(i, j, 21) * (low - 12 - 14), y1 = y0 + TH;
+        const y0 = Math.min(low - 14, 12 + rnd(i, j, 21) * 50), y1 = y0 + TH;   // spread heights so every value shows up
         if (ai) {                                            // avenue runs along z: bridge spans x
           const lo = Math.max(A.minz, B.minz) + W / 2 + 1, hi = Math.min(A.maxz, B.maxz) - W / 2 - 1;
           if (hi > lo) { const zc = lo + rnd(i, j, 22) * (hi - lo);
-            br = { key, ax: 'x', minx: A.maxx, maxx: B.minx, minz: zc - W / 2, maxz: zc + W / 2, y0, y1, neon: A.neon }; }
+            br = { key, ...bridgeValue(y0), ax: 'x', minx: A.maxx, maxx: B.minx, minz: zc - W / 2, maxz: zc + W / 2, y0, y1, neon: A.neon }; }
         } else {                                             // avenue runs along x: bridge spans z
           const lo = Math.max(A.minx, B.minx) + W / 2 + 1, hi = Math.min(A.maxx, B.maxx) - W / 2 - 1;
           if (hi > lo) { const xc = lo + rnd(i, j, 22) * (hi - lo);
-            br = { key, ax: 'z', minx: xc - W / 2, maxx: xc + W / 2, minz: A.maxz, maxz: B.minz, y0, y1, neon: A.neon }; }
+            br = { key, ...bridgeValue(y0), ax: 'z', minx: xc - W / 2, maxx: xc + W / 2, minz: A.maxz, maxz: B.minz, y0, y1, neon: A.neon }; }
         }
       }
     }
@@ -434,9 +442,9 @@ function bridge(i, j) {
   if (bridgeCache.size > 6000) bridgeCache.clear();
   return br;
 }
-const bridgeDeck = new THREE.InstancedMesh(unitBox, new THREE.MeshLambertMaterial({ color: 0x241a40, emissive: 0x150c2a }), MAX_BR);
+const bridgeDeck = new THREE.InstancedMesh(unitBox, new THREE.MeshBasicMaterial({ color: 0xffffff }), MAX_BR);
 const bridgeGlow = new THREE.InstancedMesh(unitBox, new THREE.MeshBasicMaterial({ color: 0xffffff }), MAX_BR * 2);
-[bridgeDeck, bridgeGlow].forEach(m => { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled = false; m.count = 0; scene.add(m); });
+[bridgeDeck, bridgeGlow].forEach(m => { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(0xffffff)); m.frustumCulled = false; m.count = 0; scene.add(m); });  // colour buffer must exist before the first compile
 function boxDist(b) {
   const dx = Math.max(b.minx - pos.x, 0, pos.x - b.maxx), dy = Math.max(b.y0 - pos.y, 0, pos.y - b.y1), dz = Math.max(b.minz - pos.z, 0, pos.z - b.maxz);
   return Math.hypot(dx, dy, dz);
@@ -449,9 +457,9 @@ function checkBridges(px, pz) {
   nearBridges(br => {
     // crossed the bridge's centre line while below it and within its span
     if (br.ax === 'x') { const m = (br.minz + br.maxz) / 2;
-      if ((pz - m) * (pos.z - m) <= 0 && pz !== pos.z && pos.x > br.minx && pos.x < br.maxx && pos.y < br.y0) queueNear(1000, '橋くぐり', true); }
+      if ((pz - m) * (pos.z - m) <= 0 && pz !== pos.z && pos.x > br.minx && pos.x < br.maxx && pos.y < br.y0) queueNear(br.pts, '橋くぐり', true); }
     else { const m = (br.minx + br.maxx) / 2;
-      if ((px - m) * (pos.x - m) <= 0 && px !== pos.x && pos.z > br.minz && pos.z < br.maxz && pos.y < br.y0) queueNear(1000, '橋くぐり', true); }
+      if ((px - m) * (pos.x - m) <= 0 && px !== pos.x && pos.z > br.minz && pos.z < br.maxz && pos.y < br.y0) queueNear(br.pts, '橋くぐり', true); }
   });
 }
 
@@ -479,8 +487,8 @@ function rebuildCity(px, pz) {
   for (let i = ci - VIEW_CELLS; i <= ci + VIEW_CELLS && nb < MAX_BR; i++) for (let j = cj - VIEW_CELLS; j <= cj + VIEW_CELLS && nb < MAX_BR; j++) {
     const br = bridge(i, j); if (!br) continue;
     const w = br.maxx - br.minx, d = br.maxz - br.minz, cx = (br.minx + br.maxx) / 2, cz = (br.minz + br.maxz) / 2;
-    M.compose(T.set(cx, (br.y0 + br.y1) / 2, cz), Q.identity(), S.set(w, br.y1 - br.y0, d)); bridgeDeck.setMatrixAt(nb++, M);
-    C.setHex(br.neon);
+    M.compose(T.set(cx, (br.y0 + br.y1) / 2, cz), Q.identity(), S.set(w, br.y1 - br.y0, d)); bridgeDeck.setMatrixAt(nb, M); C.copy(br.col).multiplyScalar(0.8); bridgeDeck.setColorAt(nb++, C);
+    C.copy(br.col).lerp(WHITE_C, 0.35);
     // neon strips along both long edges of the underside
     for (const k of [-1, 1]) {
       if (br.ax === 'x') M.compose(T.set(cx, br.y0 - 0.15, cz + k * (d / 2 - 0.3)), Q, S.set(w, 0.35, 0.5));
@@ -489,7 +497,7 @@ function rebuildCity(px, pz) {
     }
   }
   bridgeDeck.count = nb; bridgeGlow.count = ng;
-  bridgeDeck.instanceMatrix.needsUpdate = true; bridgeGlow.instanceMatrix.needsUpdate = true; if (bridgeGlow.instanceColor) bridgeGlow.instanceColor.needsUpdate = true;
+  bridgeDeck.instanceMatrix.needsUpdate = true; if (bridgeDeck.instanceColor) bridgeDeck.instanceColor.needsUpdate = true; bridgeGlow.instanceMatrix.needsUpdate = true; if (bridgeGlow.instanceColor) bridgeGlow.instanceColor.needsUpdate = true;
   grid.position.x = (ci + 0.5) * CELL; grid.position.z = (cj + 0.5) * CELL;
   placeItems(ci, cj);
   ground.position.x = px; ground.position.z = pz;
