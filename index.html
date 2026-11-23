@@ -144,11 +144,17 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #feed div.gold{color:#ffe066;font-size:26px;text-shadow:0 0 14px #ffd23a,0 0 40px #ff3fb4}
 @keyframes feed{0%{opacity:0;transform:scale(1.5) rotate(-3deg)}18%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-30px) scale(.9)}}
 @media (prefers-reduced-motion:reduce){#feed div,#spin b,#spin em,#score.bump,#flash.go{animation:none}}
-.len{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 100px);font:700 14px var(--display);font-variant-numeric:tabular-nums;
+.len{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 172px);font:700 14px var(--display);font-variant-numeric:tabular-nums;
   padding:4px 8px;border-radius:8px;border:1px solid currentColor;background:rgba(8,5,18,.6);transition:transform .1s}
-.len.L{left:max(16px,env(safe-area-inset-left,0px));color:var(--cyan)} .len.R{right:max(16px,env(safe-area-inset-right,0px));color:var(--magenta)}
-.len.reeling{transform:scale(1.15);box-shadow:0 0 14px currentColor;background:currentColor}
-.len.reeling em{color:var(--night)}
+.len.L{left:max(16px,env(safe-area-inset-left,0px));color:var(--cyan);transform-origin:left bottom} .len.R{right:max(16px,env(safe-area-inset-right,0px));color:var(--magenta);transform-origin:right bottom}
+.len{display:flex;flex-direction:column;gap:4px;width:104px}
+.len i{display:block;position:relative;height:10px;border-radius:5px;background:rgba(255,255,255,.12);overflow:hidden;box-shadow:inset 0 0 0 1px currentColor}
+.len u{position:absolute;left:0;top:0;bottom:0;width:100%;background:currentColor;transform-origin:left center;transition:transform .08s linear}
+.len small{font:600 10px var(--body);letter-spacing:.1em;opacity:.7}
+.len.reeling{transform:scale(1.1);box-shadow:0 0 14px currentColor}
+.len.reeling u{box-shadow:0 0 10px currentColor;animation:reelpulse .25s linear infinite}
+.len.reeling small{opacity:1}
+@keyframes reelpulse{50%{filter:brightness(1.8)}}
 .len em{font-style:normal}
 #tune .resume{background:var(--amber);color:var(--night);border:0;font-weight:700;padding:10px}
 #tune{position:fixed;top:calc(env(safe-area-inset-top,0px) + 96px);right:max(16px,env(safe-area-inset-right,0px));width:min(280px,calc(100vw - 32px));
@@ -168,7 +174,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
   <div class="stat r"><b id="spd">0</b><small>km/h</small><br><button id="gear" type="button">調整</button></div>
 </div>
 <div class="pads"><div class="pad L" id="padL">L</div><div class="pad R" id="padR">R</div>
-  <span class="len L" id="lenL" hidden></span><span class="len R" id="lenR" hidden></span></div>
+  <span class="len L" id="lenL" hidden><em></em><i><u></u></i><small>巻き取り</small></span><span class="len R" id="lenR" hidden><em></em><i><u></u></i><small>巻き取り</small></span></div>
 <div id="jet" role="group" aria-label="ジェット（押した方向に噴射）">
   <span class="ch up" data-dir="up"></span><span class="ch right" data-dir="right"></span>
   <span class="ch down" data-dir="down"></span><span class="ch left" data-dir="left"></span>
@@ -541,7 +547,7 @@ function attach(side) {
   rightV.set(-heading.z, 0, heading.x);
   const lat = (a.x - pos.x) * rightV.x + (a.z - pos.z) * rightV.z;
   r.pivot.copy(a).addScaledVector(rightV, -lat * (1 - P.SIDE));
-  r.len = pos.distanceTo(r.pivot); r.on = true; r.mesh.visible = true; r.reelReq = 0;
+  r.len = pos.distanceTo(r.pivot); r.len0 = r.len; r.on = true; r.mesh.visible = true; r.reelReq = 0;
   endFlip();
   return true;
 }
@@ -870,7 +876,10 @@ function frame(now) {
     el.hidden = !(r.on && state === 'play');
     if (r.on) {
       const reeling = (r.reelT || 0) > 0;
-      el.innerHTML = (reeling ? '<em>▲ 巻き取り ' : '<em>') + Math.round(r.len) + ' m</em>';
+      el.querySelector('em').textContent = (reeling ? '▲ ' : '') + Math.round(r.len) + ' m';
+      const span = Math.max(1, (r.len0 || r.len) - 8);
+      el.querySelector('u').style.transform = 'scaleX(' + Math.max(0.02, Math.min(1, (r.len - 8) / span)) + ')';
+      el.querySelector('small').textContent = reeling ? '巻き取り中' : '上スライドで巻き取り';
       el.classList.toggle('reeling', reeling);
     }
   }
