@@ -208,7 +208,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
       <div class="r"><strong>右半分 ▶</strong>押すと右のビルにワイヤー。離すとワイヤーが外れる</div>
     </div>
     <p class="tip">振り子の<em>一番下を少し過ぎたところ</em>で離すと大きく前へ飛ぶ。粘りすぎるとビルに激突、早すぎると失速。刺したまま<em>指を上にスライド</em>すると巻き取って、振りが小さく速くなる。地面かビルに当たったら配達失敗。</p>
-    <p class="pts">1m = 10pt ／ 青アイテム 1000pt ／ 金アイテムは取るたび回転スピード×1.2・加速×1.1 ／ ボーナスはコンボ数×5%上乗せ（青アイテムでコンボ上限+5・時間+1秒） ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 100→200→300→500→800→1300…（GOOD→COOL→…→UNBELIEVABLE）／ ビルの間を両側すれすれ Wスレスレ 1000pt／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
+    <p class="pts">1m = 10pt ／ 青アイテム 1000pt ／ 金アイテムは取るたび回転スピード×1.2・加速×1.1 ／ ボーナスはコンボ数×5%上乗せ（青アイテムでコンボ上限+5・時間+1秒） ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 100→200→300→500→800→1300…（GOOD→COOL→…→UNBELIEVABLE）／ ビルの間を両側すれすれ Wスレスレ 1000pt ／ 地面すれすれ（高さ4m未満）1500pt／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
     <button class="go" id="start" type="button">スタート</button>
   </div>
 </div>
@@ -233,7 +233,7 @@ const P = Object.assign({}, DEFAULTS);
 try { Object.assign(P, JSON.parse(localStorage.getItem('wc-tune') || '{}')); } catch (e) {}
 const nrm = new THREE.Vector3(), tang = new THREE.Vector3(), REEL_SPEED = 14, REEL_PER_PX = 0.05, RUN_SPEED = 20, JUMP_V = 15, FOOT = 0.9;
 const W_NEAR = 9, W_WINDOW = 0.7;
-let wCD = 0, wL = -9, wR = -9;
+let wCD = 0, wL = -9, wR = -9, groundArmed = true;
 const SPIN_RANKS = ['GOOD', 'COOL', 'NICE', 'GREAT', 'EXCELLENT', 'FANTASTIC', 'AMAZING', 'UNBELIEVABLE'];
 const SPIN_PTS = 100, JET_V = 36, JET_CD = 10;
 let jetCD = 0, jetT = 0;
@@ -501,7 +501,7 @@ const held = { L: false, R: false };
 
 function reset() {
   pos.set(0, 50, 8); vel.set(0, 7, -24); heading.set(0, 0, -1); camHead.copy(heading);
-  maxDist = 0; time = 0; wL = wR = -9; wCD = 0; onRoof = null; flip = null; score = 0; pathDist = 0; nearCD = 0; lastNear = null;
+  maxDist = 0; time = 0; wL = wR = -9; wCD = 0; groundArmed = true; onRoof = null; flip = null; score = 0; pathDist = 0; nearCD = 0; lastNear = null;
   body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0; jetCD = 0; jetT = 0; spinMul = 1; $('mul').hidden = true; combo = 0; comboT = 0; comboMax = 10; comboTime = 3; accelMul = 1;
   for (const s of ['L', 'R']) { ropes[s].reelT = 0; }
   for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; }
@@ -808,6 +808,9 @@ function step(dt) {
 function nearMiss(dt) {
   nearCD -= dt; wCD -= dt;
   if (onRoof || vel.length() < 15) return;
+  // ground skim: dip below 4 m without crashing; re-arms once you climb above 8 m
+  if (pos.y > 8) groundArmed = true;
+  else if (groundArmed && pos.y < 4) { groundArmed = false; bonus(1500, '地面すれすれ', true); }
   const ci = Math.round(pos.x / CELL), cj = Math.round(pos.z / CELL);
   rightV.set(-heading.z, 0, heading.x);
   let single = null, leftB = null, rightB = null;
