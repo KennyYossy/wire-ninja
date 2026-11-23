@@ -188,7 +188,10 @@ body.no-combo #combo{display:none}
 .modes .go{margin-top:0;width:100%}
 .go.dopa{background:linear-gradient(90deg,#35f2ff,#ff3fb4,#ffd23a);color:#140a24;box-shadow:0 0 22px rgba(255,63,180,.55)}
 .go small{display:block;font:700 11px var(--body);letter-spacing:.1em;opacity:.8;margin-top:2px}
-.row2{display:flex;gap:10px}.row2 .ghost{flex:1;padding:11px 8px}
+.row2{display:flex;gap:10px}.row2 .ghost,.row2 .go{flex:1;padding:11px 8px}
+.go.super{background:linear-gradient(90deg,#ffd23a,#ff3fb4,#9b6bff,#35f2ff);background-size:300% 100%;animation:superbg 2.4s linear infinite;box-shadow:0 0 26px rgba(255,210,58,.6)}
+@keyframes superbg{to{background-position:300% 0}}
+.bests small{white-space:nowrap}
 .hint{margin:4px 0 0;font-size:12px;color:var(--dim)}
 .rulecard{max-height:calc(100dvh - 32px);overflow-y:auto;text-align:left;align-items:stretch;gap:8px;padding:4px 2px}
 .rulecard .sub{text-align:center}
@@ -270,10 +273,10 @@ body.no-combo #combo{display:none}
   <div class="card">
     <p class="sub">NEON NIGHT DELIVERY</p>
     <h1 class="logo">WIRE<br>COURIER</h1>
-    <div class="bests"><div><small>ベスト</small><b id="bestN">0</b></div><div class="dopa"><small>ドパガキ ベスト</small><b id="bestD">0</b></div></div>
+    <div class="bests"><div><small>ベスト</small><b id="bestN">0</b></div><div class="dopa"><small>ドパガキ</small><b id="bestD">0</b></div><div class="dopa super"><small>超ドパガキ</small><b id="bestS">0</b></div></div>
     <div class="modes">
       <button class="go" id="start" type="button">スタート</button>
-      <button class="go dopa" id="startDopa" type="button">ドパガキモード<small>アイテム5倍</small></button>
+      <div class="row2"><button class="go dopa" id="startDopa" type="button">ドパガキ<small>アイテム5倍</small></button><button class="go dopa super" id="startSuper" type="button">超ドパガキ<small>アイテム10倍</small></button></div>
       <div class="row2">
         <button class="ghost" id="tutStart" type="button">チュートリアル</button>
         <button class="ghost" id="rulesBtn" type="button">遊び方・得点</button>
@@ -566,7 +569,7 @@ function rebuildCity(px, pz) {
 }
 
 // ---------- floating items ----------
-const ITEM_POOL = 160, collected = new Set(), activeItems = [];
+const ITEM_POOL = 360, collected = new Set(), activeItems = [];
 const itemGeo = new THREE.OctahedronGeometry(2.6);
 const itemMat = { blue: new THREE.MeshBasicMaterial({ color: 0x4fa8ff }), gold: new THREE.MeshBasicMaterial({ color: 0xffd23a }), silver: new THREE.MeshBasicMaterial({ color: 0xe4ecf5 }) };
 // item mix: gold and silver equally common, blue the rest (blue/gold counts kept from before silver existed)
@@ -579,20 +582,21 @@ for (let n = 0; n < ITEM_POOL; n++) {
   g.visible = false; scene.add(g); itemPool.push(g);
 }
 const itemKind = u => u < GOLD_SHARE ? 'gold' : u < GOLD_SHARE + SILVER_SHARE ? 'silver' : 'blue';
-const ITEM_RATE = 0.375, DOPA_MUL = 5;                    // 0.2585 before silver was added on top                  // items per avenue cell; ドパガキ = x5 (may put 2 in a cell)
+const ITEM_RATE = 0.375, MODE_MUL = { normal: 1, dopa: 5, super: 10 };                    // 0.2585 before silver was added on top                  // items per avenue cell; ドパガキ = x5 (may put 2 in a cell)
 function itemAt(i, j, slot) {
   const ave = ((i % 4) + 4) % 4 === 0 || ((j % 4) + 4) % 4 === 0;
   const tk = tutItemKinds();                               // tutorial: none / only the kind being taught / both
-  const rate = tk === true ? ITEM_RATE * (mode === 'dopa' ? DOPA_MUL : 1) : 0.45;
-  const k = slot ? 20 : 0;                                 // second slot uses its own random stream
-  if (!tk || !ave || rnd(i, j, 11 + k) > rate - (slot ? 1 : 0) || (Math.abs(i) <= 1 && j > -2)) return null;
-  return { key: i + ',' + j + (slot ? 'b' : ''), x: i * CELL + (rnd(i, j, 12 + k) - 0.5) * 16, z: j * CELL + (rnd(i, j, 13 + k) - 0.5) * 16,
+  const rate = tk === true ? ITEM_RATE * MODE_MUL[mode] : 0.45;
+  const k = slot * 20;                                     // each extra slot in a cell uses its own random stream
+  if (!tk || !ave || rnd(i, j, 11 + k) > rate - slot || (Math.abs(i) <= 1 && j > -2)) return null;
+  return { key: i + ',' + j + (slot ? '#' + slot : ''), x: i * CELL + (rnd(i, j, 12 + k) - 0.5) * 16, z: j * CELL + (rnd(i, j, 13 + k) - 0.5) * 16,
            y: 26 + rnd(i, j, 14 + k) * 36, kind: tk !== true ? tk : itemKind(rnd(i, j, 15 + k)) };
 }
 function placeItems(ci, cj) {
   activeItems.length = 0; let n = 0;
-  for (let i = ci - 6; i <= ci + 6 && n < ITEM_POOL; i++) for (let j = cj - 6; j <= cj + 6 && n < ITEM_POOL; j++) {
-    for (const slot of [0, 1]) {
+  const R = mode === 'super' ? 5 : 6, slots = Math.ceil(ITEM_RATE * MODE_MUL[mode]);   // 超ドパガキ: up to 4 per cell, slightly shorter view
+  for (let i = ci - R; i <= ci + R && n < ITEM_POOL; i++) for (let j = cj - R; j <= cj + R && n < ITEM_POOL; j++) {
+    for (let slot = 0; slot < Math.max(1, slots); slot++) {
     const it = itemAt(i, j, slot); if (!it || collected.has(it.key) || n >= ITEM_POOL) continue;
     const g = itemPool[n++]; g.position.set(it.x, it.y, it.z); g.visible = true;
     g.children.forEach(m => { m.material = itemMat[it.kind]; }); g.scale.setScalar(it.kind === 'blue' ? 1 : 1.15);
@@ -724,11 +728,12 @@ const UP = new THREE.Vector3(0, 1, 0);
 // ---------- state ----------
 const pos = new THREE.Vector3(), vel = new THREE.Vector3(), heading = new THREE.Vector3(0, 0, -1), camHead = new THREE.Vector3(0, 0, -1);
 let state = 'title', best = 0, maxDist = 0, time = 0, lastSide = null;
-let mode = 'normal';                                      // 'normal' | 'dopa' (items x4), each keeps its own best
-const BEST_KEY = { normal: 'wc-best-pt', dopa: 'wc-best-pt-dopa' }, bests = { normal: 0, dopa: 0 };
+let mode = 'normal';                                      // 'normal' | 'dopa' (items x5) | 'super' (x10), each keeps its own best
+const BEST_KEY = { normal: 'wc-best-pt', dopa: 'wc-best-pt-dopa', super: 'wc-best-pt-super' }, bests = { normal: 0, dopa: 0, super: 0 };
+const MODE_NAME = { normal: '', dopa: 'ドパガキ', super: '超ドパガキ' };
 try { for (const m in BEST_KEY) bests[m] = +localStorage.getItem(BEST_KEY[m]) || 0; } catch (e) {}
 best = bests.normal;
-function showBests() { $('bestN').textContent = bests.normal.toLocaleString(); $('bestD').textContent = bests.dopa.toLocaleString(); }
+function showBests() { $('bestN').textContent = bests.normal.toLocaleString(); $('bestD').textContent = bests.dopa.toLocaleString(); $('bestS').textContent = bests.super.toLocaleString(); }
 const held = { L: false, R: false };
 
 function reset() {
@@ -971,7 +976,7 @@ function gameOver(why) {
   best = bests[mode];
   const d = Math.floor(score), prevBest = best, isNew = d > prevBest && d > 0;
   if (isNew) { best = bests[mode] = d; try { localStorage.setItem(BEST_KEY[mode], String(best)); } catch (e) {} }
-  $('overMode').textContent = mode === 'dopa' ? 'ドパガキ ・ ' : '';
+  $('overMode').textContent = MODE_NAME[mode] ? MODE_NAME[mode] + ' ・ ' : '';
   $('why').textContent = why;
   $('record').hidden = !isNew;
   $('best').textContent = isNew ? (prevBest > 0 ? '前のベスト ' + prevBest.toLocaleString() + ' pt' : '初めての記録') : 'ベスト ' + best.toLocaleString() + ' pt（あと ' + (best - d).toLocaleString() + ' pt）';
@@ -996,6 +1001,7 @@ function gameOver(why) {
 }
 $('start').addEventListener('click', () => startGame('normal'));
 $('startDopa').addEventListener('click', () => { startGame('dopa'); pop('ドパガキモード！'); });
+$('startSuper').addEventListener('click', () => { startGame('super'); pop('超ドパガキ！！'); });
 $('rulesBtn').addEventListener('click', () => { $('title').hidden = true; $('rules').hidden = false; });
 $('rulesClose').addEventListener('click', () => { $('rules').hidden = true; $('title').hidden = false; });
 $('retry').addEventListener('click', () => startGame());
