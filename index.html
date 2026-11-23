@@ -103,6 +103,8 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 @keyframes win{0%{transform:scale(1)}30%{transform:scale(1.25) rotate(4deg)}100%{transform:scale(1)}}
 #score.bump{animation:bump .4s cubic-bezier(.2,1.8,.4,1)}
 @keyframes bump{0%{transform:scale(1.3);color:var(--amber)}100%{transform:none}}
+#mul{display:block;margin-top:6px;font:700 13px var(--display);font-style:normal;color:#ffd23a;text-shadow:0 0 8px rgba(255,210,58,.7);transform-origin:left center}
+#mul.bump{animation:bump .4s cubic-bezier(.2,1.8,.4,1)}
 #score{display:inline-block;transform-origin:left center}
 #jet{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);width:150px;height:150px;margin-left:-75px;border-radius:50%;
   --cd:1;background:conic-gradient(from -90deg,#fff calc(var(--cd) * 360deg),rgba(255,255,255,.1) 0);padding:3px;touch-action:none;cursor:pointer;
@@ -151,7 +153,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 <canvas id="game"></canvas>
 
 <div class="hud">
-  <div class="stat"><b id="score">0</b><small>pt · <span id="dist">0</span> m</small></div>
+  <div class="stat"><b id="score">0</b><small>pt · <span id="dist">0</span> m</small><em id="mul" hidden></em></div>
   <div class="stat r"><b id="spd">0</b><small>km/h</small><br><button id="gear" type="button">調整</button></div>
 </div>
 <div class="pads"><div class="pad L" id="padL">L</div><div class="pad R" id="padR">R</div>
@@ -189,7 +191,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
       <div class="r"><strong>右半分 ▶</strong>押すと右のビルにワイヤー。離すとワイヤーが外れる</div>
     </div>
     <p class="tip">振り子の<em>一番下を少し過ぎたところ</em>で離すと大きく前へ飛ぶ。粘りすぎるとビルに激突、早すぎると失速。刺したまま<em>指を上にスライド</em>すると巻き取って、振りが小さく速くなる。地面かビルに当たったら配達失敗。</p>
-    <p class="pts">1m = 10pt ／ 空中アイテム 500・1000pt ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 1回転100pt・上限なし（GOOD→…→UNBELIEVABLE）／ ビルの間を両側すれすれ Wスレスレ 1000pt／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
+    <p class="pts">1m = 10pt ／ 青アイテム 1000pt ／ 金アイテムは取るたび回転スピードUP ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 1回転100pt・上限なし（GOOD→…→UNBELIEVABLE）／ ビルの間を両側すれすれ Wスレスレ 1000pt／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
     <button class="go" id="start" type="button">スタート</button>
   </div>
 </div>
@@ -336,25 +338,27 @@ function rebuildCity(px, pz) {
 // ---------- floating items ----------
 const ITEM_POOL = 40, collected = new Set(), activeItems = [];
 const itemGeo = new THREE.OctahedronGeometry(2.6);
-const itemMat = { 500: new THREE.MeshBasicMaterial({ color: 0x7dfcff }), 1000: new THREE.MeshBasicMaterial({ color: 0xffd23a }) };
+const itemMat = { blue: new THREE.MeshBasicMaterial({ color: 0x4fa8ff }), gold: new THREE.MeshBasicMaterial({ color: 0xffd23a }) };
+const GOLD_SHARE = 0.35, SPIN_BOOST = 1.2;
+let spinMul = 1;
 const ringGeo = new THREE.TorusGeometry(3.9, 0.18, 6, 28);
 const itemPool = [];
 for (let n = 0; n < ITEM_POOL; n++) {
-  const g = new THREE.Group(); g.add(new THREE.Mesh(itemGeo, itemMat[500])); g.add(new THREE.Mesh(ringGeo, itemMat[500]));
+  const g = new THREE.Group(); g.add(new THREE.Mesh(itemGeo, itemMat.blue)); g.add(new THREE.Mesh(ringGeo, itemMat.blue));
   g.visible = false; scene.add(g); itemPool.push(g);
 }
 function itemAt(i, j) {
   const ave = ((i % 4) + 4) % 4 === 0 || ((j % 4) + 4) % 4 === 0;
   if (!ave || rnd(i, j, 11) > 0.2 || (Math.abs(i) <= 1 && j > -2)) return null;
   return { key: i + ',' + j, x: i * CELL + (rnd(i, j, 12) - 0.5) * 16, z: j * CELL + (rnd(i, j, 13) - 0.5) * 16,
-           y: 26 + rnd(i, j, 14) * 36, val: rnd(i, j, 15) < 0.25 ? 1000 : 500 };
+           y: 26 + rnd(i, j, 14) * 36, kind: rnd(i, j, 15) < GOLD_SHARE ? 'gold' : 'blue' };
 }
 function placeItems(ci, cj) {
   activeItems.length = 0; let n = 0;
   for (let i = ci - 6; i <= ci + 6 && n < ITEM_POOL; i++) for (let j = cj - 6; j <= cj + 6 && n < ITEM_POOL; j++) {
     const it = itemAt(i, j); if (!it || collected.has(it.key)) continue;
     const g = itemPool[n++]; g.position.set(it.x, it.y, it.z); g.visible = true;
-    g.children.forEach(m => { m.material = itemMat[it.val]; }); g.scale.setScalar(it.val === 1000 ? 1.25 : 1);
+    g.children.forEach(m => { m.material = itemMat[it.kind]; }); g.scale.setScalar(it.kind === 'gold' ? 1.15 : 1);
     activeItems.push({ g, it });
   }
   for (; n < ITEM_POOL; n++) itemPool[n].visible = false;
@@ -362,8 +366,10 @@ function placeItems(ci, cj) {
 function pickItems() {
   for (const a of activeItems) {
     if (!a.g.visible) continue;
-    if (a.g.position.distanceToSquared(pos) < (a.it.val === 1000 ? 64 : 49)) {
-      a.g.visible = false; collected.add(a.it.key); bonus(a.it.val, a.it.val === 1000 ? 'ゴールド' : 'アイテム', a.it.val === 1000);
+    if (a.g.position.distanceToSquared(pos) < 56) {
+      a.g.visible = false; collected.add(a.it.key);
+      if (a.it.kind === 'blue') bonus(1000, 'アイテム');
+      else goldPickup();
     }
   }
 }
@@ -479,7 +485,7 @@ const held = { L: false, R: false };
 function reset() {
   pos.set(0, 50, 8); vel.set(0, 7, -24); heading.set(0, 0, -1); camHead.copy(heading);
   maxDist = 0; time = 0; wL = wR = -9; wCD = 0; onRoof = null; flip = null; score = 0; pathDist = 0; nearCD = 0; lastNear = null;
-  body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0; jetCD = 0; jetT = 0;
+  body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0; jetCD = 0; jetT = 0; spinMul = 1; $('mul').hidden = true;
   for (const s of ['L', 'R']) { ropes[s].reelT = 0; }
   for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; }
   builtCell = null; rebuildCity(pos.x, pos.z);
@@ -533,7 +539,7 @@ function detach(side) {
   r.on = false; r.mesh.visible = false;
   if (!ropes.L.on && !ropes.R.on) {
     const sp = vel.length();
-    if (vel.y >= 16 && !onRoof) flip = { t: 0, ang: 0, rate: Math.PI * 2 * Math.min(1.0, 0.4 + (vel.y - 16) * 0.03) };
+    if (vel.y >= 16 && !onRoof) flip = { t: 0, ang: 0, rate: Math.PI * 2 * Math.min(1.0, 0.4 + (vel.y - 16) * 0.03) * spinMul };
   }
 }
 
@@ -601,6 +607,14 @@ function bonus(pts, label, gold) {
   retrigger($('score'), 'bump');
 }
 let spinHide = 0;
+function goldPickup() {
+  spinMul *= SPIN_BOOST;
+  if (flip) flip.rate *= SPIN_BOOST;                      // a jump already in the air speeds up too
+  const d = document.createElement('div'); d.className = 'gold'; d.textContent = '回転スピードUP ×' + spinMul.toFixed(2);
+  $('feed').appendChild(d); setTimeout(() => d.remove(), 1400);
+  burst(pos, 50, 10); shakeT = Math.max(shakeT, 0.12); flashScreen('rgba(255,210,58,.22)');
+  $('mul').textContent = '回転 ×' + spinMul.toFixed(2); $('mul').hidden = false; retrigger($('mul'), 'bump');
+}
 function spinTick(n) {
   const el = $('spin'); el.hidden = false; el.classList.remove('win', 'fail');
   const lv = Math.min(7, n);
