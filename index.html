@@ -302,6 +302,7 @@ body.no-combo #combo{display:none}
       <dt>地面すれすれ</dt><dd>高さ4m未満 1500pt</dd>
       <dt>橋くぐり</dt><dd>500〜2000pt（低い橋ほど高い）</dd>
       <dt>着地</dt><dd>屋上に着地 100pt</dd>
+      <dt>橋に着地</dt><dd>緑色の橋の上に着地 1000pt</dd>
       <dt>回転ジャンプ</dt><dd>100→200→300→500→800→1300…</dd>
       <dt>バックフリップ</dt><dd>進む向きが180°逆に 1000pt</dd>
       <dt>コンボ</dt><dd>ボーナスごとに＋コンボ数×5%</dd>
@@ -437,11 +438,12 @@ function cell(i, j) {
   const avenue = ((i % 4) + 4) % 4 === 0 || ((j % 4) + 4) % 4 === 0;
   const start = j <= 2 && j >= -12 && Math.abs(i) === 1;          // tall walls along the first avenue
   const nearAve = ((i % 4) + 4) % 4 !== 2 || ((j % 4) + 4) % 4 !== 2;  // block edge, faces an avenue
-  if (!avenue && (start || rnd(i, j, 1) < 0.92 - 0.42 * d)) {
+  if (!avenue && (start || rnd(i, j, 1) < 0.95 - 0.3 * d)) {     // fewer empty lots far out (was 0.92 - 0.42d)
     const shrink = 1 - 0.3 * d;
     let w = (24 + rnd(i, j, 2) * 6) * shrink, dp = (24 + rnd(i, j, 3) * 6) * shrink;
     let h = 24 + Math.pow(rnd(i, j, 4), 1.5) * 60 * (1 - 0.35 * d);
     if (nearAve) h += 18 * (1 - 0.5 * d);
+    if (rnd(i, j, 18) < 0.14) h = 9 + rnd(i, j, 19) * 11;        // some low blocks (9-20 m)
     if (rnd(i, j, 5) < 0.1) h += 45;                              // occasional tower
     if (rnd(i, j, 16) < 0.06) h += 90 + rnd(i, j, 17) * 60;       // rare skyscraper
     if (start) { w = 26; dp = 30; h = 64 + rnd(i, j, 4) * 30; }
@@ -483,11 +485,11 @@ function bridge(i, j) {
         if (ai) {                                            // avenue runs along z: bridge spans x
           const lo = Math.max(A.minz, B.minz) + W / 2 + 1, hi = Math.min(A.maxz, B.maxz) - W / 2 - 1;
           if (hi > lo) { const zc = lo + rnd(i, j, 22) * (hi - lo);
-            br = { key, ...bridgeValue(y0), ax: 'x', minx: A.maxx, maxx: B.minx, minz: zc - W / 2, maxz: zc + W / 2, y0, y1, neon: A.neon }; }
+            br = { key, isBridge: true, h: y1, ...bridgeValue(y0), ax: 'x', minx: A.maxx, maxx: B.minx, minz: zc - W / 2, maxz: zc + W / 2, y0, y1, neon: A.neon }; }
         } else {                                             // avenue runs along x: bridge spans z
           const lo = Math.max(A.minx, B.minx) + W / 2 + 1, hi = Math.min(A.maxx, B.maxx) - W / 2 - 1;
           if (hi > lo) { const xc = lo + rnd(i, j, 22) * (hi - lo);
-            br = { key, ...bridgeValue(y0), ax: 'z', minx: xc - W / 2, maxx: xc + W / 2, minz: A.maxz, maxz: B.minz, y0, y1, neon: A.neon }; }
+            br = { key, isBridge: true, h: y1, ...bridgeValue(y0), ax: 'z', minx: xc - W / 2, maxx: xc + W / 2, minz: A.maxz, maxz: B.minz, y0, y1, neon: A.neon }; }
         }
       }
     }
@@ -498,7 +500,8 @@ function bridge(i, j) {
 }
 const bridgeDeck = new THREE.InstancedMesh(unitBox, new THREE.MeshBasicMaterial({ color: 0xffffff }), MAX_BR);
 const bridgeGlow = new THREE.InstancedMesh(unitBox, new THREE.MeshBasicMaterial({ color: 0xffffff }), MAX_BR * 2);
-[bridgeDeck, bridgeGlow].forEach(m => { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, new THREE.Color(0xffffff)); m.frustumCulled = false; m.count = 0; scene.add(m); });  // colour buffer must exist before the first compile
+const bridgeTop = new THREE.InstancedMesh(unitBox, new THREE.MeshBasicMaterial({ color: 0x3dff7a }), MAX_BR);   // green = you can land here
+[bridgeDeck, bridgeGlow, bridgeTop].forEach(m => { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); if (m !== bridgeTop) m.setColorAt(0, new THREE.Color(0xffffff)); m.frustumCulled = false; m.count = 0; scene.add(m); });  // colour buffer must exist before the first compile
 function boxDist(b) {
   const dx = Math.max(b.minx - pos.x, 0, pos.x - b.maxx), dy = Math.max(b.y0 - pos.y, 0, pos.y - b.y1), dz = Math.max(b.minz - pos.z, 0, pos.z - b.maxz);
   return Math.hypot(dx, dy, dz);
@@ -541,7 +544,8 @@ function rebuildCity(px, pz) {
   for (let i = ci - VIEW_CELLS; i <= ci + VIEW_CELLS && nb < MAX_BR; i++) for (let j = cj - VIEW_CELLS; j <= cj + VIEW_CELLS && nb < MAX_BR; j++) {
     const br = bridge(i, j); if (!br) continue;
     const w = br.maxx - br.minx, d = br.maxz - br.minz, cx = (br.minx + br.maxx) / 2, cz = (br.minz + br.maxz) / 2;
-    M.compose(T.set(cx, (br.y0 + br.y1) / 2, cz), Q.identity(), S.set(w, br.y1 - br.y0, d)); bridgeDeck.setMatrixAt(nb, M); C.copy(br.col).multiplyScalar(0.8); bridgeDeck.setColorAt(nb++, C);
+    M.compose(T.set(cx, (br.y0 + br.y1) / 2, cz), Q.identity(), S.set(w, br.y1 - br.y0, d)); M.compose(T.set(cx, br.y1 + 0.08, cz), Q, S.set(w - 0.2, 0.16, d - 0.2)); bridgeTop.setMatrixAt(nb, M);
+    M.compose(T.set(cx, (br.y0 + br.y1) / 2, cz), Q, S.set(w, br.y1 - br.y0, d)); bridgeDeck.setMatrixAt(nb, M); C.copy(br.col).multiplyScalar(0.8); bridgeDeck.setColorAt(nb++, C);
     C.copy(br.col).lerp(WHITE_C, 0.35);
     // neon strips along both long edges of the underside
     for (const k of [-1, 1]) {
@@ -550,7 +554,7 @@ function rebuildCity(px, pz) {
       bridgeGlow.setMatrixAt(ng, M); bridgeGlow.setColorAt(ng++, C);
     }
   }
-  bridgeDeck.count = nb; bridgeGlow.count = ng;
+  bridgeDeck.count = nb; bridgeGlow.count = ng; bridgeTop.count = nb; bridgeTop.instanceMatrix.needsUpdate = true;
   bridgeDeck.instanceMatrix.needsUpdate = true; if (bridgeDeck.instanceColor) bridgeDeck.instanceColor.needsUpdate = true; bridgeGlow.instanceMatrix.needsUpdate = true; if (bridgeGlow.instanceColor) bridgeGlow.instanceColor.needsUpdate = true;
   grid.position.x = (ci + 0.5) * CELL; grid.position.z = (cj + 0.5) * CELL;
   placeItems(ci, cj);
@@ -952,7 +956,7 @@ function gameOver(why) {
   $('record').hidden = !isNew;
   $('best').textContent = isNew ? (prevBest > 0 ? '前のベスト ' + prevBest.toLocaleString() + ' pt' : '初めての記録') : 'ベスト ' + best.toLocaleString() + ' pt（あと ' + (best - d).toLocaleString() + ' pt）';
   // breakdown
-  const order = ['アイテム', '橋くぐり', 'すれすれ', 'Wスレスレ', '地面すれすれ', '着地', '回転ジャンプ', 'バックフリップ'];
+  const order = ['アイテム', '橋くぐり', '橋に着地', 'すれすれ', 'Wスレスレ', '地面すれすれ', '着地', '回転ジャンプ', 'バックフリップ'];
   const rows = [['移動距離 ' + Math.floor(pathDist) + ' m', '', Math.round(stats.distPts)]];
   for (const k of order) if (stats.cat[k]) rows.push([k, '×' + stats.cat[k].n, stats.cat[k].pts]);
   const esc = t => String(t).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]);
@@ -981,7 +985,7 @@ $('toTitle').addEventListener('click', () => toTitle());
 // practice mode: one lesson at a time, each clears when you do it; crashes just respawn you
 let tut = null;
 const NEAR_CATS = ['すれすれ', 'Wスレスレ', '地面すれすれ'];
-const BONUS_FEAT = { 'すれすれ': 'near', 'Wスレスレ': 'near', '地面すれすれ': 'near', 'アイテム': 'blue', '着地': 'roof', '回転ジャンプ': 'spin', 'バックフリップ': 'back', '橋くぐり': 'bridge' };
+const BONUS_FEAT = { 'すれすれ': 'near', 'Wスレスレ': 'near', '地面すれすれ': 'near', 'アイテム': 'blue', '着地': 'roof', '回転ジャンプ': 'spin', 'バックフリップ': 'back', '橋くぐり': 'bridge', '橋に着地': 'bridge' };
 // in the tutorial a mechanic (and its UI) only exists from the lesson that introduces it
 function feat(name) {
   if (!tut) return true;
@@ -1110,6 +1114,11 @@ function roofUnder(x, z) {
     const b = cell(i, j);
     if (b && x > b.minx - 0.5 && x < b.maxx + 0.5 && z > b.minz - 0.5 && z < b.maxz + 0.5) return b;
   }
+  // bridges are landable too
+  for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
+    const br = bridge(i, j);
+    if (br && x > br.minx && x < br.maxx && z > br.minz && z < br.maxz) return br;
+  }
   return null;
 }
 function collide() {
@@ -1177,7 +1186,7 @@ function step(dt) {
   // rooftops: land from above, run, then jump off the edge
   const roof = roofUnder(pos.x, pos.z);
   if (roof && vel.y <= 0 && prevY >= roof.h + FOOT - 0.05 && pos.y < roof.h + FOOT) {
-    if (!onRoof) { endFlip(); bonus(100, '着地'); }
+    if (!onRoof) { endFlip(); if (roof.isBridge) bonus(1000, '橋に着地', true); else bonus(100, '着地'); }
     pos.y = roof.h + FOOT; vel.y = 0; onRoof = roof;
     const h = Math.hypot(vel.x, vel.z), k = 1 - Math.exp(-2.5 * dt), target = h + (RUN_SPEED - h) * k;
     if (h > 0.1) { vel.x *= target / h; vel.z *= target / h; }
