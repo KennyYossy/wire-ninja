@@ -77,34 +77,45 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #flash.go{animation:flash .35s ease-out}
 @keyframes flash{0%{opacity:.75}100%{opacity:0}}
 #spin{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none;line-height:1}
-#spin b{font:700 96px var(--display);color:#fff;-webkit-text-stroke:3px var(--magenta);text-shadow:0 0 24px var(--magenta),0 0 48px var(--cyan)}
+#spin b{font:700 72px var(--display);color:#fff;-webkit-text-stroke:3px var(--magenta);text-shadow:0 0 16px var(--magenta)}
 #spin small{font:700 22px var(--body);color:var(--ink);letter-spacing:.2em;text-shadow:0 0 10px var(--cyan)}
 #spin em{font:700 26px var(--display);font-style:normal;color:var(--amber);margin-top:6px;text-shadow:0 0 14px rgba(255,181,58,.9)}
 #spin.tick b{animation:tick .45s cubic-bezier(.2,1.8,.4,1)}
 #spin.win b{animation:win .9s ease-out}
 #spin.win em{animation:tick .5s cubic-bezier(.2,1.8,.4,1);font-size:40px}
 #spin.fail{opacity:.5;filter:grayscale(1);transition:opacity .4s}
-@keyframes tick{0%{transform:scale(2.4) rotate(-20deg);opacity:0}100%{transform:none;opacity:1}}
-@keyframes win{0%{transform:scale(1)}30%{transform:scale(1.5) rotate(8deg)}100%{transform:scale(1)}}
+@keyframes tick{0%{transform:scale(1.7) rotate(-10deg);opacity:0}100%{transform:none;opacity:1}}
+@keyframes win{0%{transform:scale(1)}30%{transform:scale(1.25) rotate(4deg)}100%{transform:scale(1)}}
 #score.bump{animation:bump .4s cubic-bezier(.2,1.8,.4,1)}
-@keyframes bump{0%{transform:scale(1.6);color:var(--amber)}100%{transform:none}}
+@keyframes bump{0%{transform:scale(1.3);color:var(--amber)}100%{transform:none}}
 #score{display:inline-block;transform-origin:left center}
-#jet{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);width:128px;height:128px;margin-left:-64px;border-radius:50%;
-  --cd:1;background:conic-gradient(rgba(255,255,255,.85) calc(var(--cd) * 360deg), rgba(255,255,255,.12) 0);padding:4px;touch-action:none}
-#jet::before{content:"";position:absolute;inset:4px;border-radius:50%;background:rgba(10,7,22,.88)}
-#jet .jd{position:absolute;width:44px;height:44px;border:0;border-radius:12px;background:rgba(255,255,255,.14);color:#fff;font:700 18px var(--display);
-  display:grid;place-items:center;touch-action:none}
-#jet .up{left:42px;top:6px} #jet .down{left:42px;bottom:6px} #jet .left{left:6px;top:42px} #jet .right{right:6px;top:42px}
-#jet .jd:active{background:#fff;color:var(--night)}
-#jet .jd:focus-visible{outline:2px solid var(--cyan)}
-#jetCore{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:700 13px var(--display);color:#fff;letter-spacing:.06em;font-variant-numeric:tabular-nums;pointer-events:none}
-#jet.cool .jd{opacity:.3}
-#jet.ready{box-shadow:0 0 18px rgba(255,255,255,.5)}
+#jet{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 8px);width:150px;height:150px;margin-left:-75px;border-radius:50%;
+  --cd:1;background:conic-gradient(from -90deg,#fff calc(var(--cd) * 360deg),rgba(255,255,255,.1) 0);padding:3px;touch-action:none;cursor:pointer;
+  -webkit-tap-highlight-color:transparent}
+#jet::before{content:"";position:absolute;inset:3px;border-radius:50%;
+  background:radial-gradient(circle at 50% 38%,rgba(70,60,120,.85),rgba(8,6,20,.92) 70%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),inset 0 -10px 24px rgba(53,242,255,.12)}
+#jet::after{content:"";position:absolute;inset:3px;border-radius:50%;pointer-events:none;opacity:.35;
+  background:linear-gradient(45deg,transparent calc(50% - .5px),#fff calc(50% - .5px),#fff calc(50% + .5px),transparent calc(50% + .5px)),
+             linear-gradient(-45deg,transparent calc(50% - .5px),#fff calc(50% - .5px),#fff calc(50% + .5px),transparent calc(50% + .5px));
+  -webkit-mask:radial-gradient(circle,transparent 30px,#000 31px);mask:radial-gradient(circle,transparent 30px,#000 31px)}
+#jet .ch{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-top:4px solid #fff;border-left:4px solid #fff;
+  border-radius:3px;filter:drop-shadow(0 0 6px rgba(255,255,255,.8));transition:transform .12s,opacity .2s;pointer-events:none;z-index:1}
+#jet .up{transform:translateY(-46px) rotate(45deg)} #jet .down{transform:translateY(46px) rotate(-135deg)}
+#jet .left{transform:translateX(-46px) rotate(-45deg)} #jet .right{transform:translateX(46px) rotate(135deg)}
+#jet .up.hit{transform:translateY(-56px) rotate(45deg) scale(1.3)} #jet .down.hit{transform:translateY(56px) rotate(-135deg) scale(1.3)}
+#jet .left.hit{transform:translateX(-56px) rotate(-45deg) scale(1.3)} #jet .right.hit{transform:translateX(56px) rotate(135deg) scale(1.3)}
+#jetCore{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:56px;height:56px;border-radius:50%;display:grid;place-items:center;z-index:1;
+  font:700 15px var(--display);color:#fff;letter-spacing:.08em;font-variant-numeric:tabular-nums;pointer-events:none;
+  background:rgba(255,255,255,.08);box-shadow:0 0 0 1px rgba(255,255,255,.35)}
+#jet.cool .ch{opacity:.25} #jet.cool #jetCore{color:var(--dim)}
+#jet.ready{box-shadow:0 0 22px rgba(255,255,255,.45)}
+#jet.ready #jetCore{background:#fff;color:var(--night);box-shadow:0 0 16px #fff}
 .pts{margin:0;font-size:12px;line-height:1.6;color:var(--dim)}
 #feed{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 76px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
-#feed div{font:700 24px var(--display);color:var(--amber);white-space:nowrap;-webkit-text-stroke:1px rgba(0,0,0,.5);text-shadow:0 0 12px rgba(255,181,58,.9),0 0 30px rgba(255,63,180,.6);animation:feed 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
-#feed div.gold{color:#ffe066;font-size:32px;text-shadow:0 0 14px #ffd23a,0 0 40px #ff3fb4}
-@keyframes feed{0%{opacity:0;transform:scale(2.2) rotate(-6deg)}18%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-30px) scale(.9)}}
+#feed div{font:700 20px var(--display);color:var(--amber);white-space:nowrap;-webkit-text-stroke:1px rgba(0,0,0,.5);text-shadow:0 0 12px rgba(255,181,58,.9),0 0 30px rgba(255,63,180,.6);animation:feed 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
+#feed div.gold{color:#ffe066;font-size:26px;text-shadow:0 0 14px #ffd23a,0 0 40px #ff3fb4}
+@keyframes feed{0%{opacity:0;transform:scale(1.5) rotate(-3deg)}18%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-30px) scale(.9)}}
 @media (prefers-reduced-motion:reduce){#feed div,#spin b,#spin em,#score.bump,#flash.go{animation:none}}
 .len{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 100px);font:700 14px var(--display);font-variant-numeric:tabular-nums;
   padding:4px 8px;border-radius:8px;border:1px solid currentColor;background:rgba(8,5,18,.6);transition:transform .1s}
@@ -130,12 +141,10 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 </div>
 <div class="pads"><div class="pad L" id="padL">L</div><div class="pad R" id="padR">R</div>
   <span class="len L" id="lenL" hidden></span><span class="len R" id="lenR" hidden></span></div>
-<div id="jet" aria-label="ジェット">
-  <button type="button" class="jd up" data-dir="up" aria-label="上へジェット">▲</button>
-  <button type="button" class="jd left" data-dir="left" aria-label="左へジェット">◀</button>
+<div id="jet" role="group" aria-label="ジェット（押した方向に噴射）">
+  <span class="ch up" data-dir="up"></span><span class="ch right" data-dir="right"></span>
+  <span class="ch down" data-dir="down"></span><span class="ch left" data-dir="left"></span>
   <span id="jetCore">JET</span>
-  <button type="button" class="jd right" data-dir="right" aria-label="右へジェット">▶</button>
-  <button type="button" class="jd down" data-dir="down" aria-label="下へジェット">▼</button>
 </div>
 <div id="feed"></div>
 <div id="flash"></div>
@@ -189,7 +198,7 @@ const DEFAULTS = { G: 32, PUMP: 5, RANGE: 90, MINSPD: 16, SIDE: 0.2, TURN: 18 };
 const P = Object.assign({}, DEFAULTS);
 try { Object.assign(P, JSON.parse(localStorage.getItem('wc-tune') || '{}')); } catch (e) {}
 const nrm = new THREE.Vector3(), tang = new THREE.Vector3(), REEL_SPEED = 14, REEL_PER_PX = 0.05, RUN_SPEED = 20, JUMP_V = 9, FOOT = 0.9;
-const SPIN_PTS = 100, JET_V = 22, JET_CD = 10;
+const SPIN_PTS = 100, JET_V = 36, JET_CD = 10;
 let jetCD = 0, jetT = 0;
 const jetDir = new THREE.Vector3();
 let onRoof = null, flip = null, score = 0, pathDist = 0, nearCD = 0, lastNear = null;
@@ -308,9 +317,9 @@ function rebuildCity(px, pz) {
 
 // ---------- floating items ----------
 const ITEM_POOL = 40, collected = new Set(), activeItems = [];
-const itemGeo = new THREE.OctahedronGeometry(1.5);
+const itemGeo = new THREE.OctahedronGeometry(2.6);
 const itemMat = { 500: new THREE.MeshBasicMaterial({ color: 0x7dfcff }), 1000: new THREE.MeshBasicMaterial({ color: 0xffd23a }) };
-const ringGeo = new THREE.TorusGeometry(2.4, 0.12, 6, 24);
+const ringGeo = new THREE.TorusGeometry(3.9, 0.18, 6, 28);
 const itemPool = [];
 for (let n = 0; n < ITEM_POOL; n++) {
   const g = new THREE.Group(); g.add(new THREE.Mesh(itemGeo, itemMat[500])); g.add(new THREE.Mesh(ringGeo, itemMat[500]));
@@ -335,7 +344,7 @@ function placeItems(ci, cj) {
 function pickItems() {
   for (const a of activeItems) {
     if (!a.g.visible) continue;
-    if (a.g.position.distanceToSquared(pos) < (a.it.val === 1000 ? 18 : 14)) {
+    if (a.g.position.distanceToSquared(pos) < (a.it.val === 1000 ? 64 : 49)) {
       a.g.visible = false; collected.add(a.it.key); bonus(a.it.val, a.it.val === 1000 ? 'ゴールド' : 'アイテム', a.it.val === 1000);
     }
   }
@@ -391,11 +400,11 @@ function fireJet(dir) {
   rightV.set(-heading.z, 0, heading.x);
   if (dir === 'up') jetDir.set(0, 1, 0); else if (dir === 'down') jetDir.set(0, -1, 0);
   else jetDir.copy(rightV).multiplyScalar(dir === 'right' ? 1 : -1);
-  if (dir === 'up' && vel.y < 0) vel.y *= 0.3;           // cancel part of the fall so the boost is felt
+  if (dir === 'up' && vel.y < 0) vel.y = 0;              // cancel the fall so the boost is felt
   vel.addScaledVector(jetDir, JET_V);
   if (onRoof && dir === 'up') onRoof = null;
-  jetCD = JET_CD; jetT = 0.4; shakeT = Math.max(shakeT, 0.2);
-  jetEmit(60); flashScreen('rgba(255,255,255,.3)');
+  jetCD = JET_CD; jetT = 0.5; shakeT = Math.max(shakeT, 0.12);
+  jetEmit(45); flashScreen('rgba(255,255,255,.15)');
 }
 function updateJet(dt, now, paused) {
   if (state === 'play' && !paused) jetCD = Math.max(0, jetCD - dt);
@@ -407,7 +416,7 @@ function updateJet(dt, now, paused) {
     jetT -= dt; jetEmit(6);
     jetCone.position.copy(pos).addScaledVector(jetDir, -2.4); jetCone.position.y += 0.2;
     jetCone.quaternion.setFromUnitVectors(UP, tmp.copy(jetDir));
-    jetCone.material.opacity = Math.max(0, jetT / 0.4) * 0.9; jetCone.scale.set(1, 1 + Math.random() * 0.4, 1);
+    jetCone.material.opacity = Math.max(0, jetT / 0.5) * 0.8; jetCone.scale.set(1, 1 + Math.random() * 0.4, 1);
   } else jetCone.material.opacity = 0;
 }
 function retrigger(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
@@ -507,7 +516,7 @@ function detach(side) {
   if (!ropes.L.on && !ropes.R.on) {
     const sp = vel.length();
     if (vel.y > 6 && sp > 34) pop('GREAT!'); else if (vel.y > 2 && sp > 26) pop('NICE');
-    if (vel.y >= 16 && !onRoof) flip = { t: 0, ang: 0, rate: Math.PI * 2 * Math.min(1.6, 0.6 + (vel.y - 16) * 0.05) };
+    if (vel.y >= 16 && !onRoof) flip = { t: 0, ang: 0, rate: Math.PI * 2 * Math.min(1.0, 0.4 + (vel.y - 16) * 0.03) };
   }
 }
 
@@ -569,9 +578,9 @@ function bonus(pts, label, gold) {
   const d = document.createElement('div'); d.textContent = label + ' +' + pts; if (gold) d.className = 'gold';
   $('feed').appendChild(d); setTimeout(() => d.remove(), 1400);
   while ($('feed').children.length > 4) $('feed').firstChild.remove();
-  burst(pos, Math.min(160, 20 + pts / 6), 8 + pts / 80);
-  shakeT = Math.max(shakeT, Math.min(0.5, 0.1 + pts / 1600));
-  flashScreen(gold ? 'rgba(255,210,58,.55)' : pts >= 500 ? 'rgba(53,242,255,.4)' : 'rgba(255,63,180,.22)');
+  burst(pos, Math.min(90, 12 + pts / 10), 7 + pts / 120);
+  shakeT = Math.max(shakeT, Math.min(0.3, 0.06 + pts / 2600));
+  flashScreen(gold ? 'rgba(255,210,58,.3)' : pts >= 500 ? 'rgba(53,242,255,.22)' : 'rgba(255,63,180,.12)');
   retrigger($('score'), 'bump');
 }
 let spinHide = 0;
@@ -579,8 +588,8 @@ function spinTick(n) {
   const el = $('spin'); el.hidden = false; el.classList.remove('win', 'fail');
   $('spinN').textContent = n; $('spinPts').textContent = '+' + SPIN_PTS * n + '?';
   retrigger(el, 'tick'); spinHide = 9;
-  burst(pos, 40 + n * 20, 10 + n * 2); shakeT = Math.max(shakeT, 0.15 + n * 0.05);
-  flashScreen(['rgba(53,242,255,.35)', 'rgba(255,63,180,.4)', 'rgba(255,181,58,.45)', 'rgba(255,255,255,.55)'][Math.min(3, n - 1)]);
+  burst(pos, 24 + n * 10, 8 + n); shakeT = Math.max(shakeT, Math.min(0.25, 0.08 + n * 0.03));
+  flashScreen(['rgba(53,242,255,.18)', 'rgba(255,63,180,.2)', 'rgba(255,181,58,.22)', 'rgba(255,255,255,.26)'][Math.min(3, n - 1)]);
 }
 function endFlip() {
   if (!flip) return;
@@ -591,7 +600,7 @@ function endFlip() {
   const pts = SPIN_PTS * n;
   $('spinPts').textContent = '成功！ +' + pts; retrigger($('spin'), 'win'); spinHide = 1.3;
   bonus(pts, n + '回転ジャンプ', n >= 3);
-  burst(pos, 120 + n * 40, 16 + n * 3); shakeT = 0.5;
+  burst(pos, Math.min(140, 60 + n * 20), 12 + n * 2); shakeT = Math.max(shakeT, 0.3);
 }
 function pop(text) { $('pop').textContent = text; $('pop').style.opacity = 1; popT = 0.7; }
 function startGame() {
@@ -606,7 +615,7 @@ function gameOver(why) {
   for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; ropes[s].mark.visible = false; }
   if (flip && flip.shown) { $('spinPts').textContent = '失敗…'; $('spin').classList.add('fail'); spinHide = 0.9; }
   flip = null; body.rotation.x = 0;
-  burst(pos, 120, 14); shakeT = 0.6; flashScreen('rgba(255,40,80,.5)');
+  burst(pos, 80, 12); shakeT = 0.4; flashScreen('rgba(255,40,80,.3)');
   const d = Math.floor(score);
   if (d > best) { best = d; try { localStorage.setItem('wc-best-pt', String(best)); } catch (e) {} }
   $('why').textContent = why; $('final').textContent = d.toLocaleString();
@@ -629,11 +638,17 @@ function setTune(open) { $('tune').hidden = !open; $('paused').hidden = !open; }
 $('gear').addEventListener('click', () => setTune($('tune').hidden));
 $('tClose').addEventListener('click', () => setTune(false));
 syncTune();
-for (const btn of document.querySelectorAll('#jet .jd')) {
-  const go = e => { e.preventDefault(); e.stopPropagation(); fireJet(btn.dataset.dir); };
-  btn.addEventListener('touchstart', go, { passive: false });
-  btn.addEventListener('mousedown', go);
+// jet pad: the whole circle is the button; the quadrant you press picks the direction
+function jetPress(x, y) {
+  const r = $('jet').getBoundingClientRect(), dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2);
+  if (Math.hypot(dx, dy) < 12) return;                    // dead centre: ignore
+  const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+  if (jetCD > 0) return;
+  fireJet(dir);
+  const ch = $('jet').querySelector('.ch.' + dir); ch.classList.add('hit'); setTimeout(() => ch.classList.remove('hit'), 180);
 }
+$('jet').addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); const t = e.changedTouches[0]; jetPress(t.clientX, t.clientY); }, { passive: false });
+$('jet').addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); jetPress(e.clientX, e.clientY); });
 
 // ---------- physics ----------
 function roofUnder(x, z) {
