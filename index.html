@@ -384,7 +384,7 @@ const CELL = 36, VIEW_CELLS = 8, MAXV = 55, REEL = 1.5, AIM_FWD = 45, AIM_UP = 3
 // ---------- renderer / scene ----------
 const canvas = document.getElementById('game');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+let pixelCap = 1.5, slowAvg = 16, slowT = 0; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, pixelCap));
 const scene = new THREE.Scene();
 const SKY = 0x0b0716;
 scene.background = new THREE.Color(SKY);
@@ -579,10 +579,28 @@ const itemMat = { blue: new THREE.MeshBasicMaterial({ color: 0x4fa8ff }), gold: 
 const GOLD_SHARE = 0.367, SILVER_SHARE = 0.183, SPIN_BOOST = 1.2;
 let spinMul = 1;
 const ringGeo = new THREE.TorusGeometry(3.9, 0.18, 6, 28);
+// items are drawn as instanced meshes: 2 draw calls per colour instead of 2 per item (big win in the ドパガキ modes)
+const itemInst = {};
+for (const k of ['blue', 'gold', 'silver']) {
+  const body = new THREE.InstancedMesh(itemGeo, itemMat[k], ITEM_POOL), ring = new THREE.InstancedMesh(ringGeo, itemMat[k], ITEM_POOL);
+  for (const m of [body, ring]) { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.count = 0; m.frustumCulled = false; scene.add(m); }
+  itemInst[k] = { body, ring };
+}
 const itemPool = [];
-for (let n = 0; n < ITEM_POOL; n++) {
-  const g = new THREE.Group(); g.add(new THREE.Mesh(itemGeo, itemMat.blue)); g.add(new THREE.Mesh(ringGeo, itemMat.blue));
-  g.visible = false; scene.add(g); itemPool.push(g);
+for (let n = 0; n < ITEM_POOL; n++) itemPool.push({ visible: false, position: new THREE.Vector3() });
+const IQ = new THREE.Quaternion(), IQ2 = new THREE.Quaternion(), IE = new THREE.Euler(), IS = new THREE.Vector3(), IM = new THREE.Matrix4();
+function drawItems(now) {
+  const cnt = { blue: 0, gold: 0, silver: 0 };
+  IE.set(0, now / 500, 0); IQ.setFromEuler(IE); IE.set(now / 700, now / 500, 0); IQ2.setFromEuler(IE);
+  for (const a of activeItems) {
+    if (!a.g.visible) continue;
+    const k = a.it.kind, n = cnt[k]++, inst = itemInst[k];
+    a.g.position.y = a.it.y + Math.sin(now / 400 + a.it.x) * 0.6;
+    IS.setScalar(k === 'blue' ? 1 : 1.15);
+    IM.compose(a.g.position, IQ, IS); inst.body.setMatrixAt(n, IM);
+    IM.compose(a.g.position, IQ2, IS); inst.ring.setMatrixAt(n, IM);
+  }
+  for (const k in itemInst) { const inst = itemInst[k]; inst.body.count = inst.ring.count = cnt[k]; inst.body.instanceMatrix.needsUpdate = inst.ring.instanceMatrix.needsUpdate = true; }
 }
 const itemKind = u => u < GOLD_SHARE ? 'gold' : u < GOLD_SHARE + SILVER_SHARE ? 'silver' : 'blue';
 const ITEM_RATE = 0.316, MODE_MUL = { normal: 1, dopa: 5, super: 10, kyoku: 20 };
@@ -617,7 +635,6 @@ function placeItems(ci, cj) {
     for (let slot = -1; slot < Math.max(1, slots); slot++) {
     const it = slot < 0 ? roofItemAt(i, j) : itemAt(i, j, slot); if (!it || collected.has(it.key) || n >= ITEM_POOL) continue;
     const g = itemPool[n++]; g.position.set(it.x, it.y, it.z); g.visible = true;
-    g.children.forEach(m => { m.material = itemMat[it.kind]; }); g.scale.setScalar(it.kind === 'blue' ? 1 : 1.15);
     activeItems.push({ g, it });
     }
   }
@@ -640,14 +657,16 @@ function pickItems() {
 }
 
 // ---------- fx: sparks, flash, shake ----------
-const SPARKS = 400, spGeo = new THREE.BufferGeometry();
+const SPARKS = 240, spGeo = new THREE.BufferGeometry();
 const spPos = new Float32Array(SPARKS * 3), spCol = new Float32Array(SPARKS * 3), spVel = new Float32Array(SPARKS * 3), spLife = new Float32Array(SPARKS);
 spGeo.setAttribute('position', new THREE.BufferAttribute(spPos, 3)); spGeo.setAttribute('color', new THREE.BufferAttribute(spCol, 3));
 const sparks = new THREE.Points(spGeo, new THREE.PointsMaterial({ size: 0.45, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
 sparks.frustumCulled = false; scene.add(sparks);
 let spNext = 0, shakeT = 0;
 const FX_COLORS = [0x35f2ff, 0xff3fb4, 0xffb53a, 0xffffff, 0xffd23a];
+const FX_SCALE = 0.45;                                    // fewer sparks per burst: lighter on phones, colour flashes carry the punch
 function burst(at, count, speed) {
+  count = Math.ceil(count * FX_SCALE);
   for (let n = 0; n < count; n++) {
     const k = spNext; spNext = (spNext + 1) % SPARKS;
     spPos[k * 3] = at.x; spPos[k * 3 + 1] = at.y; spPos[k * 3 + 2] = at.z;
@@ -669,9 +688,17 @@ function updateSparks(dt) {
   }
   spGeo.attributes.position.needsUpdate = true; spGeo.attributes.color.needsUpdate = true;
 }
+// no full-screen flashing: effects tint the courier's delivery box and the score text instead
+const tintCol = new THREE.Color(), BOX_COL = new THREE.Color(0x35f2ff); let tintT = 0;
 function flashScreen(color) {
-  const el = document.getElementById('flash'); el.style.background = color;
-  el.classList.remove('go'); void el.offsetWidth; el.classList.add('go');
+  const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(color); if (!m) return;
+  tintCol.setRGB(m[1] / 255, m[2] / 255, m[3] / 255); tintT = 0.45;
+  const sc = document.getElementById('score'); sc.style.color = 'rgb(' + m[1] + ',' + m[2] + ',' + m[3] + ')';
+  clearTimeout(flashScreen.t); flashScreen.t = setTimeout(() => { sc.style.color = ''; }, 300);
+}
+function updateTint(dt) {
+  const mat = body.children[3].material;
+  if (tintT > 0) { tintT = Math.max(0, tintT - dt); mat.color.copy(BOX_COL).lerp(tintCol, tintT / 0.45); }
 }
 const jetCone = new THREE.Mesh(new THREE.ConeGeometry(0.9, 4, 10, 1, true), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
 scene.add(jetCone);
@@ -1289,6 +1316,9 @@ let last = performance.now(), aimTimer = 0;
 function frame(now) {
   requestAnimationFrame(frame);
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
+  // auto quality: if frames stay slow for ~2 s while playing, render at lower resolution
+  if (state === 'play') { slowAvg += ((now - (frame.prev || now)) - slowAvg) * 0.05; if (slowAvg > 26 && pixelCap > 1) { if ((slowT += dt) > 2) { pixelCap = 1; renderer.setPixelRatio(1); resize(); } } else slowT = 0; }
+  frame.prev = now;
   const paused = !$('tune').hidden;
   if (state === 'play' && !paused) {
     time += dt;
@@ -1313,7 +1343,7 @@ function frame(now) {
   }
   for (const s of ['L', 'R']) { const m = ropes[s].mark; if (m.visible) { m.rotation.y += dt * 3; m.scale.setScalar(1 + 0.15 * Math.sin(now / 120)); } }
 
-  for (const a of activeItems) if (a.g.visible) { a.g.rotation.y += dt * 2; a.g.children[1].rotation.x = now / 700; a.g.position.y = a.it.y + Math.sin(now / 400 + a.it.x) * 0.6; }
+  drawItems(now); updateTint(dt);
   // ropes
   for (const s of ['L', 'R']) {
     const r = ropes[s]; if (!r.on) continue;
@@ -1412,6 +1442,6 @@ reset();
 requestAnimationFrame(frame);
 
 // test hook
-window.__wc = { step, findAnchor, attach, detach, rebuildCity, heading, get state() { return state; }, set state(v) { state = v; }, pos, vel, ropes, held, setHeld, startGame, P, get dist() { return maxDist; }, get score() { return score; }, get flip() { return flip; }, get onRoof() { return onRoof; }, fireJet, get jetCD() { return jetCD; }, activeItems, bridge, get tut() { return tut; }, startTutorial };
+window.__wc = { renderer, step, findAnchor, attach, detach, rebuildCity, heading, get state() { return state; }, set state(v) { state = v; }, pos, vel, ropes, held, setHeld, startGame, P, get dist() { return maxDist; }, get score() { return score; }, get flip() { return flip; }, get onRoof() { return onRoof; }, fireJet, get jetCD() { return jetCD; }, activeItems, bridge, get tut() { return tut; }, startTutorial };
 })();
 </script>
