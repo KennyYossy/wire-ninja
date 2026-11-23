@@ -569,7 +569,7 @@ for (let n = 0; n < ITEM_POOL; n++) {
   const g = new THREE.Group(); g.add(new THREE.Mesh(itemGeo, itemMat.blue)); g.add(new THREE.Mesh(ringGeo, itemMat.blue));
   g.visible = false; scene.add(g); itemPool.push(g);
 }
-const ITEM_RATE = 0.235, DOPA_MUL = 5;                  // items per avenue cell; ドパガキ = x5 (may put 2 in a cell)
+const ITEM_RATE = 0.2585, DOPA_MUL = 5;                  // items per avenue cell; ドパガキ = x5 (may put 2 in a cell)
 function itemAt(i, j, slot) {
   const ave = ((i % 4) + 4) % 4 === 0 || ((j % 4) + 4) % 4 === 0;
   const tk = tutItemKinds();                               // tutorial: none / only the kind being taught / both
