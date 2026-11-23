@@ -71,6 +71,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 .go:focus-visible,#gear:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
 .big{font:700 56px/1 var(--display);font-variant-numeric:tabular-nums;margin:0}
 .big span{font-size:22px;color:var(--dim)}
+.kanji{margin:-6px 0 0;font-size:14px;color:var(--ink);letter-spacing:.06em;word-break:break-all}
 .best{color:var(--dim);font-size:14px;margin:0}
 .why{color:var(--magenta);font-size:15px;margin:0}
 .result{gap:10px;max-height:calc(100% - 24px);overflow-y:auto;padding-block:12px}
@@ -183,7 +184,7 @@ body.no-combo #combo{display:none}
 .bests div{flex:1;max-width:170px;border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:8px 6px}
 .bests small{display:block;font-size:11px;color:var(--dim);letter-spacing:.1em}
 .bests b{font:700 22px var(--display);color:#fff;font-variant-numeric:tabular-nums}
-.bests .dopa b{background:linear-gradient(90deg,#35f2ff,#ff3fb4,#ffd23a);-webkit-background-clip:text;background-clip:text;color:transparent}
+.bests .dopa .sc b{background:linear-gradient(90deg,#35f2ff,#ff3fb4,#ffd23a);-webkit-background-clip:text;background-clip:text;color:transparent}
 .modes{display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px;margin-top:4px}
 .modes .go{margin-top:0;width:100%}
 .go.dopa{background:linear-gradient(90deg,#35f2ff,#ff3fb4,#ffd23a);color:#140a24;box-shadow:0 0 22px rgba(255,63,180,.55)}
@@ -192,9 +193,10 @@ body.no-combo #combo{display:none}
 .go.super{background:linear-gradient(90deg,#ffd23a,#ff3fb4,#9b6bff,#35f2ff);background-size:300% 100%;animation:superbg 2.4s linear infinite;box-shadow:0 0 26px rgba(255,210,58,.6)}
 @keyframes superbg{to{background-position:300% 0}}
 .bests small{white-space:nowrap}
-.bests{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.bests div{max-width:none;padding:7px 2px}.bests b{font-size:17px}.bests small{font-size:10px;letter-spacing:0}
+.bests{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.bests div{max-width:none;padding:7px 2px}.bests .sc b{font-size:16px}.bests .sc i{display:block;font-style:normal;font-size:9px;line-height:1.3;color:var(--ink);word-break:break-all;margin-top:2px}.bests small{font-size:10px;letter-spacing:0}
 .go.kyoku{background:linear-gradient(90deg,#ff3040,#ffd23a,#ff3fb4,#ff3040);background-size:300% 100%;animation:superbg 1.2s linear infinite;color:#fff;-webkit-text-stroke:.6px #400;box-shadow:0 0 30px rgba(255,48,64,.7)}
 .hint{margin:4px 0 0;font-size:12px;color:var(--dim)}
+.warn{margin:2px 0 0;font-size:11px;line-height:1.5;color:#ffb070;border:1px solid rgba(255,176,112,.35);border-radius:10px;padding:6px 10px}
 .rulecard{max-height:calc(100dvh - 32px);overflow-y:auto;text-align:left;align-items:stretch;gap:8px;padding:4px 2px}
 .rulecard .sub{text-align:center}
 .rulecard h2{margin:6px 0 0;font:700 15px var(--display);color:var(--cyan);letter-spacing:.1em}
@@ -275,7 +277,7 @@ body.no-combo #combo{display:none}
   <div class="card">
     <p class="sub">NEON NIGHT DELIVERY</p>
     <h1 class="logo">WIRE<br>COURIER</h1>
-    <div class="bests"><div><small>ベスト</small><b id="bestN">0</b></div><div class="dopa"><small>ドパガキ</small><b id="bestD">0</b></div><div class="dopa super"><small>超ドパガキ</small><b id="bestS">0</b></div><div class="dopa kyoku"><small>極ドパガキ</small><b id="bestK">0</b></div></div>
+    <div class="bests"><div><small>ベスト</small><span class="sc" id="bestN"></span></div><div class="dopa"><small>ドパガキ</small><span class="sc" id="bestD"></span></div><div class="dopa super"><small>超ドパガキ</small><span class="sc" id="bestS"></span></div><div class="dopa kyoku"><small>極ドパガキ</small><span class="sc" id="bestK"></span></div></div>
     <div class="modes">
       <button class="go" id="start" type="button">スタート</button>
       <div class="row2"><button class="go dopa" id="startDopa" type="button">ドパガキ<small>アイテム5倍</small></button><button class="go dopa super" id="startSuper" type="button">超ドパガキ<small>アイテム10倍</small></button></div>
@@ -286,6 +288,7 @@ body.no-combo #combo{display:none}
       </div>
     </div>
     <p class="hint">左半分＝左ワイヤー ／ 右半分＝右ワイヤー</p>
+    <p class="warn">⚠ このゲームには光の点滅や激しい動きが含まれる場合があります。気分が悪くなったらすぐにプレイをやめて休んでください。</p>
   </div>
 </div>
 <div class="overlay" id="rules" hidden>
@@ -348,6 +351,7 @@ body.no-combo #combo{display:none}
     <p class="why" id="why">ビルに激突</p>
     <p class="sub">配達失敗 ・ <span id="overMode"></span>SCORE</p>
     <p class="big"><b id="final">0</b><span> pt</span></p>
+    <p class="kanji" id="finalK"></p>
     <p class="record" id="record" hidden>NEW RECORD!</p>
     <p class="best" id="best"></p>
     <dl class="breakdown" id="breakdown"></dl>
@@ -778,7 +782,25 @@ const BEST_KEY = { normal: 'wc-best-pt', dopa: 'wc-best-pt-dopa', super: 'wc-bes
 const MODE_NAME = { normal: '', dopa: 'ドパガキ', super: '超ドパガキ', kyoku: '極ドパガキ' };
 try { for (const m in BEST_KEY) bests[m] = +localStorage.getItem(BEST_KEY[m]) || 0; } catch (e) {}
 best = bests.normal;
-function showBests() { $('bestN').textContent = bests.normal.toLocaleString(); $('bestD').textContent = bests.dopa.toLocaleString(); $('bestS').textContent = bests.super.toLocaleString(); $('bestK').textContent = bests.kyoku.toLocaleString(); }
+// score formats for the high-score displays: exponent (1.23e+6) with full kanji numerals underneath
+const fmtExp = n => n > 0 ? n.toExponential(2) : '0';
+function kanjiNum(n) {
+  n = Math.floor(n); if (n <= 0) return '零';
+  const D = '〇一二三四五六七八九', SM = ['', '十', '百', '千'], BIG = ['', '万', '億', '兆', '京'];
+  let out = '', g = 0;
+  while (n > 0 && g < BIG.length) {
+    const part = n % 10000; n = Math.floor(n / 10000);
+    if (part) {
+      let t = '', p = part;
+      for (let k = 0; k < 4 && p > 0; k++, p = Math.floor(p / 10)) { const d = p % 10; if (d) t = (d === 1 && k > 0 ? '' : D[d]) + SM[k] + t; }
+      out = t + BIG[g] + out;
+    }
+    g++;
+  }
+  return out;
+}
+function setScore(el, n) { el.innerHTML = '<b>' + fmtExp(n) + '</b><i>' + kanjiNum(n) + '</i>'; }
+function showBests() { setScore($('bestN'), bests.normal); setScore($('bestD'), bests.dopa); setScore($('bestS'), bests.super); setScore($('bestK'), bests.kyoku); }
 const held = { L: false, R: false };
 
 function reset() {
@@ -1024,7 +1046,7 @@ function gameOver(why) {
   $('overMode').textContent = MODE_NAME[mode] ? MODE_NAME[mode] + ' ・ ' : '';
   $('why').textContent = why;
   $('record').hidden = !isNew;
-  $('best').textContent = isNew ? (prevBest > 0 ? '前のベスト ' + prevBest.toLocaleString() + ' pt' : '初めての記録') : 'ベスト ' + best.toLocaleString() + ' pt（あと ' + (best - d).toLocaleString() + ' pt）';
+  $('best').innerHTML = isNew ? (prevBest > 0 ? '前のベスト ' + fmtExp(prevBest) + ' pt<br><small>' + kanjiNum(prevBest) + '</small>' : '初めての記録') : 'ベスト ' + fmtExp(best) + ' pt（あと ' + (best - d).toLocaleString() + ' pt）<br><small>' + kanjiNum(best) + '</small>';
   // breakdown
   const order = ['アイテム', '橋くぐり', '橋に着地', 'すれすれ', 'Wスレスレ', '地面すれすれ', '着地', '回転ジャンプ', 'バックフリップ'];
   const rows = [['移動距離 ' + Math.floor(pathDist) + ' m', '', Math.round(stats.distPts)]];
@@ -1035,13 +1057,13 @@ function gameOver(why) {
   const st = [[stats.maxCombo, '最大コンボ'], [stats.maxSpin ? stats.maxSpin + '回転' : '-', '最多回転'], [Math.round(stats.maxSpeed * 3.6), '最高 km/h'],
               [stats.blues, '青アイテム'], [stats.golds, '金アイテム'], [stats.silvers, '銀アイテム']];
   $('stats').innerHTML = st.map(x => '<div><b>' + x[0] + '</b><small>' + x[1] + '</small></div>').join('');
-  $('final').textContent = '0';
+  $('final').textContent = '0'; $('finalK').textContent = '';
   setTimeout(() => {
     $('over').hidden = false;
     // count the score up
     const t0 = performance.now(), dur = Math.min(1400, 400 + d / 20);
     (function tick(now) { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-      $('final').textContent = Math.round(d * e).toLocaleString(); if (k < 1 && state === 'over') requestAnimationFrame(tick); })(t0);
+      const v = Math.round(d * e); $('final').textContent = fmtExp(v); $('finalK').textContent = kanjiNum(v); if (k < 1 && state === 'over') requestAnimationFrame(tick); })(t0);
   }, 450);
 }
 $('start').addEventListener('click', () => startGame('normal'));
