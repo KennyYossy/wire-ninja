@@ -81,6 +81,21 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #spin small{font:700 22px var(--body);color:var(--ink);letter-spacing:.2em;text-shadow:0 0 10px var(--cyan)}
 #spin em{font:700 26px var(--display);font-style:normal;color:var(--amber);margin-top:6px;text-shadow:0 0 14px rgba(255,181,58,.9)}
 #spin.tick b{animation:tick .45s cubic-bezier(.2,1.8,.4,1)}
+#spin i{font:700 26px var(--display);font-style:normal;letter-spacing:.12em;margin-bottom:4px;color:#fff;white-space:nowrap}
+#spin.tick i{animation:tick .5s cubic-bezier(.2,1.8,.4,1)}
+#spin.lv1 i{color:var(--cyan);font-size:24px}
+#spin.lv2 i{color:#7dffb0;font-size:28px;text-shadow:0 0 8px #7dffb0}
+#spin.lv3 i{color:var(--amber);font-size:32px;text-shadow:0 0 12px var(--amber)}
+#spin.lv4 i{color:var(--magenta);font-size:36px;text-shadow:0 0 14px var(--magenta),0 0 28px var(--magenta)}
+#spin.lv5 i{font-size:40px;color:#fff;-webkit-text-stroke:2px var(--magenta);text-shadow:0 0 16px var(--cyan),0 0 32px var(--magenta)}
+#spin.lv6 i,#spin.lv7 i{font-size:min(40px,10vw);color:transparent;-webkit-background-clip:text;background-clip:text;
+  background-image:linear-gradient(90deg,#35f2ff,#ff3fb4,#ffb53a,#7dffb0,#35f2ff);background-size:200% 100%;animation:tick .5s cubic-bezier(.2,1.8,.4,1),rainbow 1s linear infinite;
+  filter:drop-shadow(0 0 10px rgba(255,255,255,.7))}
+#spin.lv7 i{font-size:min(40px,9.5vw);letter-spacing:.02em;filter:drop-shadow(0 0 14px #fff) drop-shadow(0 0 30px #ff3fb4)}
+#spin.lv7 b{font-size:110px;-webkit-text-stroke:4px #ffb53a;text-shadow:0 0 30px #ff3fb4,0 0 60px #35f2ff}
+#spin.lv6 b{font-size:92px;-webkit-text-stroke:3px var(--cyan)}
+#spin.lv5 b{font-size:84px}
+@keyframes rainbow{to{background-position:-200% 0}}
 #spin.win b{animation:win .9s ease-out}
 #spin.win em{animation:tick .5s cubic-bezier(.2,1.8,.4,1);font-size:40px}
 #spin.fail{opacity:.5;filter:grayscale(1);transition:opacity .4s}
@@ -148,7 +163,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 </div>
 <div id="feed"></div>
 <div id="flash"></div>
-<div id="spin" hidden><b id="spinN">1</b><small>回転</small><em id="spinPts">+200</em></div>
+<div id="spin" hidden><i id="spinRank">GOOD</i><b id="spinN">1</b><small>回転</small><em id="spinPts">+200</em></div>
 <div id="pop"></div>
 <div id="warn">低すぎる！</div>
 <div id="paused" hidden>一時停止中</div>
@@ -174,7 +189,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
       <div class="r"><strong>右半分 ▶</strong>押すと右のビルにワイヤー。離すとワイヤーが外れる</div>
     </div>
     <p class="tip">振り子の<em>一番下を少し過ぎたところ</em>で離すと大きく前へ飛ぶ。粘りすぎるとビルに激突、早すぎると失速。刺したまま<em>指を上にスライド</em>すると巻き取って、振りが小さく速くなる。地面かビルに当たったら配達失敗。</p>
-    <p class="pts">1m = 10pt ／ 空中アイテム 500・1000pt ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 1回転100pt・上限なし（完全に回りきった分だけ）／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
+    <p class="pts">1m = 10pt ／ 空中アイテム 500・1000pt ／ ビルすれすれ 200pt ／ 屋上に着地 100pt ／ 回転大ジャンプ 1回転100pt・上限なし（GOOD→…→UNBELIEVABLE）／ ビルの間を両側すれすれ Wスレスレ 1000pt／ 中央下のジェットで上下左右に回避（10秒に1回）</p>
     <button class="go" id="start" type="button">スタート</button>
   </div>
 </div>
@@ -198,6 +213,9 @@ const DEFAULTS = { G: 32, PUMP: 5, RANGE: 90, MINSPD: 16, SIDE: 0.2, TURN: 18 };
 const P = Object.assign({}, DEFAULTS);
 try { Object.assign(P, JSON.parse(localStorage.getItem('wc-tune') || '{}')); } catch (e) {}
 const nrm = new THREE.Vector3(), tang = new THREE.Vector3(), REEL_SPEED = 14, REEL_PER_PX = 0.05, RUN_SPEED = 20, JUMP_V = 9, FOOT = 0.9;
+const W_NEAR = 4;
+let wCD = 0;
+const SPIN_RANKS = ['GOOD', 'NICE', 'GREAT', 'EXCELLENT', 'FANTASTIC', 'AMAZING', 'UNBELIEVABLE'];
 const SPIN_PTS = 100, JET_V = 36, JET_CD = 10;
 let jetCD = 0, jetT = 0;
 const jetDir = new THREE.Vector3();
@@ -515,7 +533,6 @@ function detach(side) {
   r.on = false; r.mesh.visible = false;
   if (!ropes.L.on && !ropes.R.on) {
     const sp = vel.length();
-    if (vel.y > 6 && sp > 34) pop('GREAT!'); else if (vel.y > 2 && sp > 26) pop('NICE');
     if (vel.y >= 16 && !onRoof) flip = { t: 0, ang: 0, rate: Math.PI * 2 * Math.min(1.0, 0.4 + (vel.y - 16) * 0.03) };
   }
 }
@@ -586,10 +603,17 @@ function bonus(pts, label, gold) {
 let spinHide = 0;
 function spinTick(n) {
   const el = $('spin'); el.hidden = false; el.classList.remove('win', 'fail');
+  const lv = Math.min(7, n);
   $('spinN').textContent = n; $('spinPts').textContent = '+' + SPIN_PTS * n + '?';
+  $('spinRank').textContent = SPIN_RANKS[lv - 1] + (lv === 7 ? '!!' : lv >= 4 ? '!' : '');
+  for (let k = 1; k <= 7; k++) el.classList.toggle('lv' + k, k === lv);
   retrigger(el, 'tick'); spinHide = 9;
-  burst(pos, 24 + n * 10, 8 + n); shakeT = Math.max(shakeT, Math.min(0.25, 0.08 + n * 0.03));
-  flashScreen(['rgba(53,242,255,.18)', 'rgba(255,63,180,.2)', 'rgba(255,181,58,.22)', 'rgba(255,255,255,.26)'][Math.min(3, n - 1)]);
+  // effects grow with the rank: modest at GOOD, lavish at UNBELIEVABLE
+  burst(pos, 15 + lv * 18, 6 + lv * 2);
+  if (lv >= 5) setTimeout(() => burst(pos, lv * 15, 10 + lv * 2), 160);
+  if (lv >= 7) setTimeout(() => burst(pos, 120, 22), 320);
+  shakeT = Math.max(shakeT, Math.min(0.45, 0.04 + lv * 0.055));
+  flashScreen(['rgba(53,242,255,.08)', 'rgba(125,255,176,.12)', 'rgba(255,181,58,.16)', 'rgba(255,63,180,.2)', 'rgba(255,255,255,.24)', 'rgba(255,210,58,.3)', 'rgba(255,255,255,.42)'][lv - 1]);
 }
 function endFlip() {
   if (!flip) return;
@@ -719,21 +743,31 @@ function step(dt) {
     if (h > 0.1) { vel.x *= target / h; vel.z *= target / h; }
   } else if (onRoof && roof !== onRoof) {
     onRoof = null;
-    if (!ropes.L.on && !ropes.R.on) { vel.y = JUMP_V; pop('JUMP'); }
+    if (!ropes.L.on && !ropes.R.on) vel.y = JUMP_V;
   } else if (onRoof && pos.y > onRoof.h + FOOT + 0.05) onRoof = null;
   const hit = collide(); if (hit) { gameOver(hit); return; }
   nearMiss(dt);
 }
 function nearMiss(dt) {
-  nearCD -= dt;
+  nearCD -= dt; wCD -= dt;
   if (onRoof || vel.length() < 15) return;
   const ci = Math.round(pos.x / CELL), cj = Math.round(pos.z / CELL);
+  rightV.set(-heading.z, 0, heading.x);
+  let single = null, leftB = null, rightB = null;
   for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
     const b = cell(i, j); if (!b || pos.y > b.h + 0.9) continue;
-    const dx = Math.max(b.minx - pos.x, 0, pos.x - b.maxx), dz = Math.max(b.minz - pos.z, 0, pos.z - b.maxz);
-    const d = Math.hypot(dx, dz);
-    if (d > 0.5 && d < 3 && (b !== lastNear || nearCD <= 0)) { lastNear = b; nearCD = 1.2; bonus(200, 'すれすれ'); return; }
+    const nx = Math.min(Math.max(pos.x, b.minx), b.maxx), nz = Math.min(Math.max(pos.z, b.minz), b.maxz);
+    const d = Math.hypot(nx - pos.x, nz - pos.z);
+    if (d <= 0.5 || d >= W_NEAR) continue;
+    const side = (nx - pos.x) * rightV.x + (nz - pos.z) * rightV.z;   // >0 building on the right
+    if (side > 0.3) rightB = b; else if (side < -0.3) leftB = b;
+    if (d < 3 && !single) single = b;
   }
+  if (leftB && rightB) {
+    if (wCD <= 0) { wCD = 2; nearCD = 1.2; lastNear = single || leftB; bonus(1000, 'Wスレスレ', true); }
+    return;
+  }
+  if (single && (single !== lastNear || nearCD <= 0)) { lastNear = single; nearCD = 1.2; bonus(200, 'すれすれ'); }
 }
 
 // ---------- frame ----------
