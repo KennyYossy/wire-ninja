@@ -202,6 +202,8 @@ body.no-combo #combo{display:none}
 #feed{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
 #feed div{font:700 17px var(--display);color:var(--amber);white-space:nowrap;-webkit-text-stroke:1px rgba(0,0,0,.5);text-shadow:0 0 12px rgba(255,181,58,.9),0 0 30px rgba(255,63,180,.6);animation:feed 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
 #feed div.blue{color:#8fc9ff;text-shadow:0 0 12px #4fa8ff,0 0 26px #4fa8ff}
+#feed div.silver{color:#f2f7ff;font-size:26px;text-shadow:0 0 14px #cfe3ff,0 0 36px #8fc9ff}
+#jet.refill{animation:bump .4s cubic-bezier(.2,1.8,.4,1)}
 #feed div.jetup{color:#ffffff;font-size:20px;text-shadow:0 0 12px #9ad8ff,0 0 26px #ffffff}
 #feed div.accel{color:#ffb070;font-size:22px;text-shadow:0 0 12px #ff7a2a,0 0 30px #ffd23a}
 #feed div.gold{color:#ffe066;font-size:26px;text-shadow:0 0 14px #ffd23a,0 0 40px #ff3fb4}
@@ -297,7 +299,8 @@ body.no-combo #combo{display:none}
     <dl>
       <dt>移動</dt><dd>1m = 10pt（どの方向でも）</dd>
       <dt>青アイテム</dt><dd>1000pt ＋ コンボ上限+5・時間+1秒</dd>
-      <dt>金アイテム</dt><dd>回転スピード×1.2・加速×1.1・ジェット時間×0.95（ずっと）</dd>
+      <dt>金アイテム</dt><dd>回転スピード×1.2・加速×1.1（ずっと）</dd>
+      <dt>銀アイテム</dt><dd>ジェット即回復・ジェット時間×0.95（ずっと）</dd>
       <dt>すれすれ</dt><dd>ビルの横3m以内 200pt</dd>
       <dt>Wスレスレ</dt><dd>ビルの間を両側すれすれ 1000pt</dd>
       <dt>地面すれすれ</dt><dd>高さ4m未満 1500pt</dd>
@@ -565,8 +568,9 @@ function rebuildCity(px, pz) {
 // ---------- floating items ----------
 const ITEM_POOL = 160, collected = new Set(), activeItems = [];
 const itemGeo = new THREE.OctahedronGeometry(2.6);
-const itemMat = { blue: new THREE.MeshBasicMaterial({ color: 0x4fa8ff }), gold: new THREE.MeshBasicMaterial({ color: 0xffd23a }) };
-const GOLD_SHARE = 0.45, SPIN_BOOST = 1.2;
+const itemMat = { blue: new THREE.MeshBasicMaterial({ color: 0x4fa8ff }), gold: new THREE.MeshBasicMaterial({ color: 0xffd23a }), silver: new THREE.MeshBasicMaterial({ color: 0xe4ecf5 }) };
+// item mix: gold and silver equally common, blue the rest (blue/gold counts kept from before silver existed)
+const GOLD_SHARE = 0.31, SILVER_SHARE = 0.31, SPIN_BOOST = 1.2;
 let spinMul = 1;
 const ringGeo = new THREE.TorusGeometry(3.9, 0.18, 6, 28);
 const itemPool = [];
@@ -574,7 +578,8 @@ for (let n = 0; n < ITEM_POOL; n++) {
   const g = new THREE.Group(); g.add(new THREE.Mesh(itemGeo, itemMat.blue)); g.add(new THREE.Mesh(ringGeo, itemMat.blue));
   g.visible = false; scene.add(g); itemPool.push(g);
 }
-const ITEM_RATE = 0.2585, DOPA_MUL = 5;                  // items per avenue cell; ドパガキ = x5 (may put 2 in a cell)
+const itemKind = u => u < GOLD_SHARE ? 'gold' : u < GOLD_SHARE + SILVER_SHARE ? 'silver' : 'blue';
+const ITEM_RATE = 0.375, DOPA_MUL = 5;                    // 0.2585 before silver was added on top                  // items per avenue cell; ドパガキ = x5 (may put 2 in a cell)
 function itemAt(i, j, slot) {
   const ave = ((i % 4) + 4) % 4 === 0 || ((j % 4) + 4) % 4 === 0;
   const tk = tutItemKinds();                               // tutorial: none / only the kind being taught / both
@@ -582,7 +587,7 @@ function itemAt(i, j, slot) {
   const k = slot ? 20 : 0;                                 // second slot uses its own random stream
   if (!tk || !ave || rnd(i, j, 11 + k) > rate - (slot ? 1 : 0) || (Math.abs(i) <= 1 && j > -2)) return null;
   return { key: i + ',' + j + (slot ? 'b' : ''), x: i * CELL + (rnd(i, j, 12 + k) - 0.5) * 16, z: j * CELL + (rnd(i, j, 13 + k) - 0.5) * 16,
-           y: 26 + rnd(i, j, 14 + k) * 36, kind: tk !== true ? tk : rnd(i, j, 15 + k) < GOLD_SHARE ? 'gold' : 'blue' };
+           y: 26 + rnd(i, j, 14 + k) * 36, kind: tk !== true ? tk : itemKind(rnd(i, j, 15 + k)) };
 }
 function placeItems(ci, cj) {
   activeItems.length = 0; let n = 0;
@@ -590,7 +595,7 @@ function placeItems(ci, cj) {
     for (const slot of [0, 1]) {
     const it = itemAt(i, j, slot); if (!it || collected.has(it.key) || n >= ITEM_POOL) continue;
     const g = itemPool[n++]; g.position.set(it.x, it.y, it.z); g.visible = true;
-    g.children.forEach(m => { m.material = itemMat[it.kind]; }); g.scale.setScalar(it.kind === 'gold' ? 1.15 : 1);
+    g.children.forEach(m => { m.material = itemMat[it.kind]; }); g.scale.setScalar(it.kind === 'blue' ? 1 : 1.15);
     activeItems.push({ g, it });
     }
   }
@@ -606,6 +611,7 @@ function pickItems() {
         const d = document.createElement('div'); d.className = 'blue'; d.textContent = '最大COMBO数＆継続時間↑（' + comboMax + ' / ' + comboTime + '秒）';
         $('feed').appendChild(d); setTimeout(() => d.remove(), 1600);
       }
+      else if (a.it.kind === 'silver') silverPickup();
       else goldPickup();
     }
   }
@@ -870,8 +876,8 @@ function bonus(pts, label, gold) {
 let spinHide = 0;
 // spin bonus for n full rotations: 100, 200, 300, 500, 800, 1300, ... (Fibonacci-like)
 function spinPts(n) { let a = 100, b = 200; if (n <= 1) return 100; for (let k = 2; k < n; k++) [a, b] = [b, a + b]; return b; }
-const stats = { distPts: 0, cat: {}, maxCombo: 0, maxSpin: 0, maxSpeed: 0, golds: 0, blues: 0 };
-function resetStats() { stats.distPts = 0; stats.cat = {}; stats.maxCombo = 0; stats.maxSpin = 0; stats.maxSpeed = 0; stats.golds = 0; stats.blues = 0; }
+const stats = { distPts: 0, cat: {}, maxCombo: 0, maxSpin: 0, maxSpeed: 0, golds: 0, blues: 0, silvers: 0 };
+function resetStats() { stats.distPts = 0; stats.cat = {}; stats.maxCombo = 0; stats.maxSpin = 0; stats.maxSpeed = 0; stats.golds = 0; stats.blues = 0; stats.silvers = 0; }
 let combo = 0, comboT = 0, comboMax = 10, comboTime = 3, accelMul = 1;
 function comboHit() {
   if (state !== 'play' || !feat('combo')) return;
@@ -901,13 +907,23 @@ function goldPickup() {
   if (!feat('gold')) return;
   spinMul *= SPIN_BOOST;
   if (flip) flip.rate *= SPIN_BOOST;                      // a jump already in the air speeds up too
-  accelMul *= 1.1; jetMul *= 0.95;
+  accelMul *= 1.1;
   const d = document.createElement('div'); d.className = 'gold'; d.textContent = '回転スピードUP ×' + spinMul.toFixed(2);
   const d2 = document.createElement('div'); d2.className = 'accel'; d2.textContent = '加速力UP ×' + accelMul.toFixed(2);
-  const d3 = document.createElement('div'); d3.className = 'jetup'; d3.textContent = 'ジェット時間 ×' + jetMul.toFixed(2) + '（' + (JET_CD * jetMul).toFixed(1) + '秒）';
-  $('feed').appendChild(d); $('feed').appendChild(d2); $('feed').appendChild(d3); setTimeout(() => d.remove(), 1400); setTimeout(() => d2.remove(), 1600); setTimeout(() => d3.remove(), 1800);
+  $('feed').appendChild(d); $('feed').appendChild(d2); setTimeout(() => d.remove(), 1400); setTimeout(() => d2.remove(), 1600);
   burst(pos, 50, 10); shakeT = Math.max(shakeT, 0.12); flashScreen('rgba(255,210,58,.22)');
   showMul(); comboHit(); stats.golds++;
+}
+// silver: jet refills at once and its cooldown gets x0.95 shorter for the rest of the run
+function silverPickup() {
+  if (!feat('silver')) return;
+  jetMul *= 0.95; jetCD = 0;
+  const d = document.createElement('div'); d.className = 'silver'; d.textContent = 'ジェット即回復！';
+  const d2 = document.createElement('div'); d2.className = 'jetup'; d2.textContent = 'ジェット時間 ×' + jetMul.toFixed(2) + '（' + (JET_CD * jetMul).toFixed(1) + '秒）';
+  $('feed').appendChild(d); $('feed').appendChild(d2); setTimeout(() => d.remove(), 1400); setTimeout(() => d2.remove(), 1600);
+  burst(pos, 50, 10); shakeT = Math.max(shakeT, 0.12); flashScreen('rgba(230,240,255,.25)');
+  retrigger($('jet'), 'refill');
+  showMul(); comboHit(); stats.silvers++; tutEvent('silver');
 }
 function spinTick(n) {
   const el = $('spin'); el.hidden = false; el.classList.remove('win', 'fail');
@@ -967,7 +983,7 @@ function gameOver(why) {
   $('breakdown').innerHTML = rows.map(r => '<dt>' + esc(r[0]) + '</dt><dd class="n">' + r[1] + '</dd><dd class="v">' + r[2].toLocaleString() + '</dd>').join('')
     + '<dt class="total">合計</dt><dd class="total"></dd><dd class="total">' + d.toLocaleString() + '</dd>';
   const st = [[stats.maxCombo, '最大コンボ'], [stats.maxSpin ? stats.maxSpin + '回転' : '-', '最多回転'], [Math.round(stats.maxSpeed * 3.6), '最高 km/h'],
-              [stats.blues, '青アイテム'], [stats.golds, '金アイテム'], ['×' + spinMul.toFixed(2), '回転スピード']];
+              [stats.blues, '青アイテム'], [stats.golds, '金アイテム'], [stats.silvers, '銀アイテム']];
   $('stats').innerHTML = st.map(x => '<div><b>' + x[0] + '</b><small>' + x[1] + '</small></div>').join('');
   $('final').textContent = '0';
   setTimeout(() => {
@@ -998,8 +1014,9 @@ function feat(name) {
 }
 function tutItemKinds() {
   if (!tut) return true;
-  const b = feat('blue'), g = feat('gold');
-  return b && g ? (TUT[tut.i].unlock === 'gold' ? 'gold' : true) : b ? 'blue' : false;
+  const cur = TUT[tut.i].unlock;
+  if (cur === 'blue' || cur === 'gold' || cur === 'silver') return cur;   // only the item being taught
+  return feat('silver') ? true : false;
 }
 const TUT = [
   { t: '左ワイヤー', d: '画面の<b>左半分</b>を押し続けて、左のビルにぶら下がろう（1秒）', goal: 1, tick: (s, dt) => ropes.L.on ? dt : 0 },
@@ -1012,6 +1029,7 @@ const TUT = [
   { t: 'すれすれ', unlock: 'near', d: 'ビルの横（3m以内）や地面の近く（4m未満）を<b>ぶつからずに</b>通り抜けよう', goal: 1, on: (s, e) => e.type === 'bonus' && NEAR_CATS.includes(e.label) ? 1 : 0 },
   { t: '青アイテム', unlock: 'blue', d: '大通りに浮かぶ<b>青いアイテム</b>を取ろう。1000pt ＋ コンボ上限+5・コンボ時間+1秒', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'blue' ? 1 : 0 },
   { t: '金アイテム', unlock: 'gold', d: '<b>金のアイテム</b>を取ろう。点数はないけど、取るたびに回転スピード×1.2・加速×1.1（そのゲーム中ずっと）', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'gold' ? 1 : 0 },
+  { t: '銀アイテム', unlock: 'silver', d: '<b>銀のアイテム</b>を取ろう。取ると<b>ジェットが即回復</b>して、ジェットの待ち時間も×0.95に短くなる（そのゲーム中ずっと）', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'silver' ? 1 : 0 },
   { t: '橋くぐり', unlock: 'bridge', d: 'ビルの間にかかった<b>橋の下</b>をくぐろう。<b>低い橋ほど高得点</b>（水色500 → ピンク → 金2000pt）。橋にぶつかると失敗', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '橋くぐり' ? 1 : 0 },
   { t: '屋上に着地', unlock: 'roof', d: 'ビルの<b>屋上に上から</b>落ちると走れる（端で自動ジャンプ）。ジェット↑で高く上がるとやりやすい', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '着地' ? 1 : 0 },
   { t: '回転ジャンプ', unlock: 'spin', d: '<b>勢いよく上に飛びながら</b>離すと回転する。1回転以上・1.5秒以上の滞空で成功', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '回転ジャンプ' ? 1 : 0 },
