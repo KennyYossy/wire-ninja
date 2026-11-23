@@ -1046,7 +1046,7 @@ function gameOver(why) {
   $('overMode').textContent = MODE_NAME[mode] ? MODE_NAME[mode] + ' ・ ' : '';
   $('why').textContent = why;
   $('record').hidden = !isNew;
-  $('best').innerHTML = isNew ? (prevBest > 0 ? '前のベスト ' + fmtExp(prevBest) + ' pt<br><small>' + kanjiNum(prevBest) + '</small>' : '初めての記録') : 'ベスト ' + fmtExp(best) + ' pt（あと ' + (best - d).toLocaleString() + ' pt）<br><small>' + kanjiNum(best) + '</small>';
+  $('best').innerHTML = isNew ? (prevBest > 0 ? '前のベスト ' + fmtExp(prevBest) + ' pt<br><small>' + kanjiNum(prevBest) + '</small>' : '初めての記録') : 'ベスト ' + fmtExp(best) + ' pt<br><small>' + kanjiNum(best) + '</small><br>あと ' + fmtExp(best - d) + ' pt<br><small>' + kanjiNum(best - d) + '</small>';
   // breakdown
   const order = ['アイテム', '橋くぐり', '橋に着地', 'すれすれ', 'Wスレスレ', '地面すれすれ', '着地', '回転ジャンプ', 'バックフリップ'];
   const rows = [['移動距離 ' + Math.floor(pathDist) + ' m', '', Math.round(stats.distPts)]];
