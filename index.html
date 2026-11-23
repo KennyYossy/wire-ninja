@@ -592,12 +592,18 @@ function itemAt(i, j, slot) {
   return { key: i + ',' + j + (slot ? '#' + slot : ''), x: i * CELL + (rnd(i, j, 12 + k) - 0.5) * 16, z: j * CELL + (rnd(i, j, 13 + k) - 0.5) * 16,
            y: 26 + rnd(i, j, 14 + k) * 36, kind: tk !== true ? tk : itemKind(rnd(i, j, 15 + k)) };
 }
+// 30% of rooftops carry an item too (same colour mix)
+function roofItemAt(i, j) {
+  const tk = tutItemKinds(); if (!tk) return null;
+  const b = cell(i, j); if (!b || rnd(i, j, 30) > 0.3) return null;
+  return { key: 'r' + i + ',' + j, x: b.x, z: b.z, y: b.h + 2.6, kind: tk !== true ? tk : itemKind(rnd(i, j, 31)) };
+}
 function placeItems(ci, cj) {
   activeItems.length = 0; let n = 0;
   const R = mode === 'super' ? 5 : 6, slots = Math.ceil(ITEM_RATE * MODE_MUL[mode]);   // 超ドパガキ: up to 4 per cell, slightly shorter view
   for (let i = ci - R; i <= ci + R && n < ITEM_POOL; i++) for (let j = cj - R; j <= cj + R && n < ITEM_POOL; j++) {
-    for (let slot = 0; slot < Math.max(1, slots); slot++) {
-    const it = itemAt(i, j, slot); if (!it || collected.has(it.key) || n >= ITEM_POOL) continue;
+    for (let slot = -1; slot < Math.max(1, slots); slot++) {
+    const it = slot < 0 ? roofItemAt(i, j) : itemAt(i, j, slot); if (!it || collected.has(it.key) || n >= ITEM_POOL) continue;
     const g = itemPool[n++]; g.position.set(it.x, it.y, it.z); g.visible = true;
     g.children.forEach(m => { m.material = itemMat[it.kind]; }); g.scale.setScalar(it.kind === 'blue' ? 1 : 1.15);
     activeItems.push({ g, it });
