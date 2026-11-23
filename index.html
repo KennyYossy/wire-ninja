@@ -320,6 +320,7 @@ function cell(i, j) {
     let h = 24 + Math.pow(rnd(i, j, 4), 1.5) * 60 * (1 - 0.35 * d);
     if (nearAve) h += 18 * (1 - 0.5 * d);
     if (rnd(i, j, 5) < 0.1) h += 45;                              // occasional tower
+    if (rnd(i, j, 16) < 0.06) h += 90 + rnd(i, j, 17) * 60;       // rare skyscraper
     if (start) { w = 26; dp = 30; h = 64 + rnd(i, j, 4) * 30; }
     const mx = Math.max(0, (CELL - w) / 2 - 2.5), mz = Math.max(0, (CELL - dp) / 2 - 2.5);
     const ox = start ? 0 : (rnd(i, j, 6) * 2 - 1) * mx, oz = start ? 0 : (rnd(i, j, 7) * 2 - 1) * mz;
@@ -510,7 +511,7 @@ const held = { L: false, R: false };
 
 function reset() {
   pos.set(0, 50, 8); vel.set(0, 7, -24); heading.set(0, 0, -1); camHead.copy(heading);
-  maxDist = 0; time = 0; wL = wR = -9; wCD = 0; groundArmed = true; onRoof = null; flip = null; score = 0; pathDist = 0; nearCD = 0; lastNear = null;
+  maxDist = 0; time = 0; wL = wR = -9; wCD = 0; groundArmed = true; pendingNear.length = 0; onRoof = null; flip = null; score = 0; pathDist = 0; nearCD = 0; lastNear = null;
   body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0; jetCD = 0; jetT = 0; spinMul = 1; $('mul').hidden = true; combo = 0; comboT = 0; comboMax = 10; comboTime = 3; accelMul = 1;
   for (const s of ['L', 'R']) { ropes[s].reelT = 0; }
   for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; }
@@ -814,15 +815,25 @@ function step(dt) {
     onRoof = null;
     if (!ropes.L.on && !ropes.R.on) vel.y = JUMP_V;
   } else if (onRoof && pos.y > onRoof.h + FOOT + 0.05) onRoof = null;
-  const hit = collide(); if (hit) { gameOver(hit); return; }
+  const hit = collide(); if (hit) { pendingNear.length = 0; gameOver(hit); return; }
   nearMiss(dt);
+  settleNear(dt);
+}
+// near-miss bonuses are held briefly and only paid if you survive the pass
+const NEAR_CONFIRM = 0.6, pendingNear = [];
+function queueNear(pts, label, gold) { pendingNear.push({ pts, label, gold, t: NEAR_CONFIRM }); }
+function settleNear(dt) {
+  for (let k = pendingNear.length - 1; k >= 0; k--) {
+    const q = pendingNear[k]; q.t -= dt;
+    if (q.t <= 0) { pendingNear.splice(k, 1); bonus(q.pts, q.label, q.gold); }
+  }
 }
 function nearMiss(dt) {
   nearCD -= dt; wCD -= dt;
   if (onRoof || vel.length() < 15) return;
   // ground skim: dip below 4 m without crashing; re-arms once you climb above 8 m
   if (pos.y > 8) groundArmed = true;
-  else if (groundArmed && pos.y < 4) { groundArmed = false; bonus(1500, '地面すれすれ', true); }
+  else if (groundArmed && pos.y < 4) { groundArmed = false; queueNear(1500, '地面すれすれ', true); }
   const ci = Math.round(pos.x / CELL), cj = Math.round(pos.z / CELL);
   rightV.set(-heading.z, 0, heading.x);
   let single = null, leftB = null, rightB = null;
@@ -837,11 +848,11 @@ function nearMiss(dt) {
   }
   if (leftB) wL = time; if (rightB) wR = time;
   if (time - wL < W_WINDOW && time - wR < W_WINDOW) {
-    if (wCD <= 0) { wCD = 2; nearCD = 1.2; lastNear = single || leftB || rightB; wL = wR = -9; bonus(1000, 'Wスレスレ', true); return; }
+    if (wCD <= 0) { wCD = 2; nearCD = 1.2; lastNear = single || leftB || rightB; wL = wR = -9; queueNear(1000, 'Wスレスレ', true); return; }
     if (leftB && rightB) return;
     return;
   }
-  if (single && (single !== lastNear || nearCD <= 0)) { lastNear = single; nearCD = 1.2; bonus(200, 'すれすれ'); }
+  if (single && (single !== lastNear || nearCD <= 0)) { lastNear = single; nearCD = 1.2; queueNear(200, 'すれすれ'); }
 }
 
 // ---------- frame ----------
