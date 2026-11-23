@@ -104,6 +104,8 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #tut button{font:700 12px var(--body);color:var(--ink);background:transparent;border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:6px 12px}
 #tut.ok{border-color:var(--amber);box-shadow:0 0 28px rgba(255,181,58,.6)}
 #tut.ok h3::after{content:'  クリア！';color:var(--amber)}
+html[lang=en] #tut.ok h3::after{content:'  CLEAR!'}
+#title .card{position:relative}#langBtn{position:absolute;top:10px;right:10px;font:700 12px var(--body);letter-spacing:.08em;color:#cfc6e8;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:5px 10px}
 body.tutorial #feed{top:calc(env(safe-area-inset-top,0px) + 250px)}
 .tapgo{font:700 18px var(--display);color:var(--amber);letter-spacing:.1em;animation:blink 1.1s ease-in-out infinite}
 @keyframes blink{50%{opacity:.35}}
@@ -142,6 +144,14 @@ body.no-combo #combo{display:none}
 @keyframes bump{0%{transform:scale(1.3);color:var(--amber)}100%{transform:none}}
 #mul{display:block;margin-top:6px;font:700 13px var(--display);font-style:normal;color:#ffd23a;text-shadow:0 0 8px rgba(255,210,58,.7);transform-origin:left center}
 #mul.bump{animation:bump .4s cubic-bezier(.2,1.8,.4,1)}
+#target{display:block;margin-top:4px;font:700 12px var(--body);font-style:normal;color:#ff9ad5}#target.won{color:#7dffb0}
+#chal{margin-bottom:10px;border:1px solid rgba(255,63,180,.6);border-radius:14px;padding:10px;background:rgba(255,63,180,.08)}#chal p{margin:0 0 8px;font-weight:700;text-align:center}
+.codeRow{display:flex;justify-content:center;align-items:center;gap:6px;min-height:30px}.link{background:none;border:0;color:#bfb6e0;font:600 12px var(--body);text-decoration:underline;padding:4px}
+#codeIn{width:120px;font:700 14px var(--body);padding:7px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.35);color:var(--ink);text-transform:uppercase}#codeBox .ghost{padding:7px 14px}
+.chalRes{margin:0;font-weight:700;text-align:center;color:#ff9ad5}.chalRes.won{color:#7dffb0}
+.share{align-self:stretch;width:100%;display:flex;flex-direction:column;gap:8px}.share .ghost{padding:10px 14px}
+#shareText{width:100%;box-sizing:border-box;font:13px var(--body);color:var(--ink);background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:8px;resize:none}
+.row3{display:flex;gap:8px}.row3 .ghost{flex:1;padding:9px 6px}
 #combo{margin-top:8px;display:grid;grid-template-columns:auto auto 1fr;align-items:baseline;column-gap:6px;width:150px;transform-origin:left center}
 #combo .lbl{font:700 11px var(--display);letter-spacing:.16em;color:var(--cyan)}
 #combo b{font:700 26px var(--display);font-variant-numeric:tabular-nums;color:#fff;text-shadow:0 0 10px var(--cyan)}
@@ -193,7 +203,7 @@ body.no-combo #combo{display:none}
 .go.locked,.go.dopa.locked{background:#2a2438;color:#8a8399;animation:none;box-shadow:none;-webkit-text-stroke:0;text-shadow:none}
 .go.locked small{letter-spacing:0;font-size:10px;white-space:nowrap}
 .bests .locked{filter:grayscale(1);opacity:.5;text-shadow:none;box-shadow:none;animation:none}
-.go.locked.shake{animation:lockshake .3s}
+.go.locked.shake,#codeIn.shake{animation:lockshake .3s}
 @keyframes lockshake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .go.super{background:linear-gradient(90deg,#ffd23a,#ff3fb4,#9b6bff,#35f2ff);background-size:300% 100%;animation:superbg 2.4s linear infinite;box-shadow:0 0 26px rgba(255,210,58,.6)}
 @keyframes superbg{to{background-position:300% 0}}
@@ -248,107 +258,110 @@ body.no-combo #combo{display:none}
 <canvas id="game"></canvas>
 
 <div class="hud">
-  <div class="stat"><b id="score">0</b><small>pt · <span id="dist">0</span> m</small><em id="mul" hidden></em>
+  <div class="stat"><b id="score">0</b><small>pt · <span id="dist">0</span> m</small><em id="mul" hidden></em><em id="target" hidden></em>
     <div id="combo" class="off"><span class="lbl">COMBO</span><b id="comboN">0</b><span id="comboMax">/ 10</span><i><u id="comboBar"></u></i></div></div>
-  <div class="stat r"><b id="spd">0</b><small>km/h</small><br><button id="gear" type="button">調整</button></div>
+  <div class="stat r"><b id="spd">0</b><small>km/h</small><br><button id="gear" type="button" data-en="TUNE">調整</button></div>
 </div>
 <div class="pads"><div class="pad L" id="padL">L</div><div class="pad R" id="padR">R</div>
-  <span class="len L" id="lenL" hidden><em></em><i><u></u></i><small>巻き取り</small></span><span class="len R" id="lenR" hidden><em></em><i><u></u></i><small>巻き取り</small></span></div>
-<div id="jet" role="group" aria-label="ジェット（押した方向に噴射）">
+  <span class="len L" id="lenL" hidden><em></em><i><u></u></i><small data-en="REEL">巻き取り</small></span><span class="len R" id="lenR" hidden><em></em><i><u></u></i><small data-en="REEL">巻き取り</small></span></div>
+<div id="jet" role="group" aria-label="ジェット（押した方向に噴射）" data-en-label="Jet (boost in the pressed direction)">
   <span class="ch up" data-dir="up"></span><span class="ch right" data-dir="right"></span>
   <span class="ch down" data-dir="down"></span><span class="ch left" data-dir="left"></span>
   <span id="jetCore">JET</span>
 </div>
 <div id="feed"></div>
 <div id="flash"></div>
-<div id="spin" hidden><i id="spinRank">GOOD</i><b id="spinN">1</b><small>回転</small><em id="spinPts">+200</em></div>
+<div id="spin" hidden><i id="spinRank">GOOD</i><b id="spinN">1</b><small data-en="SPIN">回転</small><em id="spinPts">+200</em></div>
 <div id="pop"></div>
-<div id="warn">低すぎる！</div>
-<div id="paused" hidden>一時停止中</div>
+<div id="warn" data-en="TOO LOW!">低すぎる！</div>
+<div id="paused" hidden data-en="PAUSED">一時停止中</div>
 <div class="reticle L" id="retL" hidden><i></i><b></b><span>L</span></div>
 <div class="reticle R" id="retR" hidden><i></i><b></b><span>R</span></div>
 
 <div id="tune" hidden>
-  <label for="tG"><span class="row">重力 <output id="oG"></output></span><input id="tG" type="range" min="15" max="55" step="1"></label>
-  <label for="tP"><span class="row">ぶら下がり中の加速 <output id="oP"></output></span><input id="tP" type="range" min="0" max="25" step="1"></label>
-  <label for="tR"><span class="row">ワイヤー射程 <output id="oR"></output></span><input id="tR" type="range" min="50" max="130" step="5"></label>
-  <label for="tS"><span class="row">最低スピード <output id="oS"></output></span><input id="tS" type="range" min="0" max="30" step="1"></label>
-  <label for="tT"><span class="row">曲がる強さ <output id="oT"></output></span><input id="tT" type="range" min="0" max="120" step="5"></label>
-  <button id="tReset" type="button">初期値に戻す</button>
-  <button id="tClose" type="button" class="resume">閉じて再開</button>
+  <label for="tG"><span class="row"><span data-en="Gravity">重力</span> <output id="oG"></output></span><input id="tG" type="range" min="15" max="55" step="1"></label>
+  <label for="tP"><span class="row"><span data-en="Swing pump">ぶら下がり中の加速</span> <output id="oP"></output></span><input id="tP" type="range" min="0" max="25" step="1"></label>
+  <label for="tR"><span class="row"><span data-en="Wire range">ワイヤー射程</span> <output id="oR"></output></span><input id="tR" type="range" min="50" max="130" step="5"></label>
+  <label for="tS"><span class="row"><span data-en="Min speed">最低スピード</span> <output id="oS"></output></span><input id="tS" type="range" min="0" max="30" step="1"></label>
+  <label for="tT"><span class="row"><span data-en="Turn strength">曲がる強さ</span> <output id="oT"></output></span><input id="tT" type="range" min="0" max="120" step="5"></label>
+  <button id="tReset" type="button" data-en="Reset to default">初期値に戻す</button>
+  <button id="tClose" type="button" class="resume" data-en="Close &amp; resume">閉じて再開</button>
 </div>
 
 <div class="overlay" id="title">
   <div class="card">
+    <button id="langBtn" type="button" aria-label="Language">EN</button>
     <p class="sub">NEON NIGHT SWING</p>
     <h1 class="logo">WIRE<br>NINJA</h1>
-    <div class="bests"><div><small>ベスト</small><span class="sc" id="bestN"></span></div><div class="dopa"><small>ドパガキ</small><span class="sc" id="bestD"></span></div><div class="dopa super"><small>超ドパガキ</small><span class="sc" id="bestS"></span></div><div class="dopa kyoku"><small>極ドパガキ</small><span class="sc" id="bestK"></span></div></div>
+    <div class="bests"><div><small data-en="BEST">ベスト</small><span class="sc" id="bestN"></span></div><div class="dopa"><small>ドパガキ</small><span class="sc" id="bestD"></span></div><div class="dopa super"><small>超ドパガキ</small><span class="sc" id="bestS"></span></div><div class="dopa kyoku"><small>極ドパガキ</small><span class="sc" id="bestK"></span></div></div>
+    <div id="chal" hidden><p id="chalT"></p><div class="row2"><button class="go" id="chalGo" type="button" data-en="Accept">挑戦する</button><button class="ghost" id="chalX" type="button" data-en="Dismiss">やめる</button></div></div>
     <div class="modes">
-      <button class="go" id="start" type="button">スタート</button>
+      <button class="go" id="start" type="button" data-en="START">スタート</button>
       <div class="row2"><button class="go dopa" id="startDopa" type="button">ドパガキ<small>アイテム5倍</small></button><button class="go dopa super" id="startSuper" type="button">超ドパガキ<small>アイテム10倍</small></button></div>
       <button class="go dopa kyoku" id="startKyoku" type="button">極ドパガキ<small>金20倍・青銀10倍</small></button>
       <div class="row2">
-        <button class="ghost" id="tutStart" type="button">チュートリアル</button>
-        <button class="ghost" id="rulesBtn" type="button">遊び方・得点</button>
+        <button class="ghost" id="tutStart" type="button" data-en="Tutorial">チュートリアル</button>
+        <button class="ghost" id="rulesBtn" type="button" data-en="How to play">遊び方・得点</button>
       </div>
     </div>
-    <p class="hint">左半分＝左ワイヤー ／ 右半分＝右ワイヤー</p>
-    <p class="warn">⚠ このゲームには光の点滅や激しい動きが含まれる場合があります。気分が悪くなったらすぐにプレイをやめて休んでください。</p>
+    <div class="codeRow"><button class="link" id="codeBtn" type="button" data-en="Enter a challenge code">挑戦コードを入力</button><span id="codeBox" hidden><input id="codeIn" type="text" inputmode="text" autocomplete="off" placeholder="D-12345" aria-label="challenge code"><button class="ghost" id="codeOk" type="button">OK</button></span></div>
+    <p class="hint" data-en="Left half = left wire / Right half = right wire">左半分＝左ワイヤー ／ 右半分＝右ワイヤー</p>
+    <p class="warn" data-en="⚠ This game may contain flashing lights and intense motion. If you feel unwell, stop playing and rest right away.">⚠ このゲームには光の点滅や激しい動きが含まれる場合があります。気分が悪くなったらすぐにプレイをやめて休んでください。</p>
   </div>
 </div>
 <div class="overlay" id="rules" hidden>
   <div class="card rulecard">
     <p class="sub">HOW TO PLAY</p>
-    <h2>操作</h2>
+    <h2 data-en="Controls">操作</h2>
     <ul>
-      <li><b>左半分 / 右半分</b>を押すと左右のビルにワイヤー。押してる間ぶら下がり、離すと外れる</li>
-      <li>振り子の<em>一番下を少し過ぎたところ</em>で離すと大きく前へ飛ぶ</li>
-      <li>刺したまま<em>指を上にスライド</em>で巻き取り（長いワイヤーほど速い）</li>
-      <li>ワイヤーは<em>5秒で切れる</em>（赤く点滅したら合図）</li>
-      <li>中央下の<em>ジェット</em>で押した方向に急加速（10秒に1回）</li>
-      <li>屋上に上から落ちると走って、端で自動ジャンプ</li>
-      <li>地面・ビル・橋にぶつかったらゲームオーバー</li>
+      <li data-en="Hold the <b>left / right half</b> to fire a wire at a building on that side. You hang while holding and let go on release"><b>左半分 / 右半分</b>を押すと左右のビルにワイヤー。押してる間ぶら下がり、離すと外れる</li>
+      <li data-en="Release <em>just past the bottom</em> of the swing to fly far forward">振り子の<em>一番下を少し過ぎたところ</em>で離すと大きく前へ飛ぶ</li>
+      <li data-en="While attached, <em>slide your finger up</em> to reel in (longer wires reel faster)">刺したまま<em>指を上にスライド</em>で巻き取り（長いワイヤーほど速い）</li>
+      <li data-en="Wires <em>snap after 5 seconds</em> (they blink red first)">ワイヤーは<em>5秒で切れる</em>（赤く点滅したら合図）</li>
+      <li data-en="The <em>JET</em> at the bottom boosts you in the pressed direction (once every 10 s)">中央下の<em>ジェット</em>で押した方向に急加速（10秒に1回）</li>
+      <li data-en="Drop onto a rooftop from above to run; you jump automatically at the edge">屋上に上から落ちると走って、端で自動ジャンプ</li>
+      <li data-en="Hitting the ground, a building or a bridge is game over">地面・ビル・橋にぶつかったらゲームオーバー</li>
     </ul>
-    <h2>得点</h2>
+    <h2 data-en="Scoring">得点</h2>
     <dl>
-      <dt>移動</dt><dd>1m = 10pt（どの方向でも）</dd>
-      <dt>青アイテム</dt><dd>1000pt ＋ コンボ上限+5・時間+1秒</dd>
-      <dt>金アイテム</dt><dd>回転スピード×1.2・加速×1.1（ずっと）</dd>
-      <dt>銀アイテム</dt><dd>ジェット即回復・ジェット時間-10%（ずっと）</dd>
-      <dt>すれすれ</dt><dd>ビルの横3m以内 200pt</dd>
-      <dt>Wスレスレ</dt><dd>ビルの間を両側すれすれ 1000pt</dd>
-      <dt>地面すれすれ</dt><dd>高さ4m未満 1500pt</dd>
-      <dt>橋くぐり</dt><dd>500〜2000pt（低い橋ほど高い）</dd>
-      <dt>着地</dt><dd>屋上に着地 100pt</dd>
-      <dt>橋に着地</dt><dd>緑色の橋の上に着地 1000pt</dd>
-      <dt>回転ジャンプ</dt><dd>100→200→300→500→800→1300…</dd>
-      <dt>バックフリップ</dt><dd>進む向きが180°逆に 1000pt</dd>
-      <dt>コンボ</dt><dd>ボーナスごとに＋コンボ数×5%</dd>
+      <dt data-en="Distance">移動</dt><dd data-en="1m = 10pt (any direction)">1m = 10pt（どの方向でも）</dd>
+      <dt data-en="Blue item">青アイテム</dt><dd data-en="1000pt + combo cap +5, time +1 s">1000pt ＋ コンボ上限+5・時間+1秒</dd>
+      <dt data-en="Gold item">金アイテム</dt><dd data-en="Spin speed ×1.2, acceleration ×1.1 (whole run)">回転スピード×1.2・加速×1.1（ずっと）</dd>
+      <dt data-en="Silver item">銀アイテム</dt><dd data-en="Jet refills instantly, jet cooldown -10% (whole run)">ジェット即回復・ジェット時間-10%（ずっと）</dd>
+      <dt data-en="Close call">すれすれ</dt><dd data-en="Within 3 m of a building: 200pt">ビルの横3m以内 200pt</dd>
+      <dt data-en="Double close call">Wスレスレ</dt><dd data-en="Close to buildings on both sides: 1000pt">ビルの間を両側すれすれ 1000pt</dd>
+      <dt data-en="Ground skim">地面すれすれ</dt><dd data-en="Below 4 m: 1500pt">高さ4m未満 1500pt</dd>
+      <dt data-en="Bridge dive">橋くぐり</dt><dd data-en="500–2000pt (lower bridges pay more)">500〜2000pt（低い橋ほど高い）</dd>
+      <dt data-en="Landing">着地</dt><dd data-en="Land on a rooftop: 100pt">屋上に着地 100pt</dd>
+      <dt data-en="Bridge landing">橋に着地</dt><dd data-en="Land on top of a green bridge: 1000pt">緑色の橋の上に着地 1000pt</dd>
+      <dt data-en="Spin jump">回転ジャンプ</dt><dd data-en="100→200→300→500→800→1300…">100→200→300→500→800→1300…</dd>
+      <dt data-en="Backflip">バックフリップ</dt><dd data-en="Reverse your direction 180°: 1000pt">進む向きが180°逆に 1000pt</dd>
+      <dt data-en="Combo">コンボ</dt><dd data-en="+5% per combo on every bonus">ボーナスごとに＋コンボ数×5%</dd>
     </dl>
-    <button class="go" id="rulesClose" type="button">閉じる</button>
+    <button class="go" id="rulesClose" type="button" data-en="Close">閉じる</button>
   </div>
 </div>
 <div id="tut" hidden>
   <div class="top"><span class="no" id="tutNo">1/12</span><h3 id="tutT"></h3><span class="cnt" id="tutCnt"></span></div>
   <p id="tutD"></p>
   <div class="bar"><u id="tutBar"></u></div>
-  <div class="row"><button id="tutSkip" type="button">スキップ ▶</button><button id="tutQuit" type="button">やめる</button></div>
+  <div class="row"><button id="tutSkip" type="button" data-en="Skip ▶">スキップ ▶</button><button id="tutQuit" type="button" data-en="Quit">やめる</button></div>
 </div>
 <div class="overlay" id="tutReady" hidden>
   <div class="card">
     <p class="sub" id="trNo">STEP 1 / 13</p>
     <h1 class="logo" style="font-size:34px" id="trT"></h1>
     <p class="tip" id="trD"></p>
-    <p class="tapgo">タップしてスタート</p>
-    <button class="ghost" id="trQuit" type="button">やめる</button>
+    <p class="tapgo" data-en="Tap to start">タップしてスタート</p>
+    <button class="ghost" id="trQuit" type="button" data-en="Quit">やめる</button>
   </div>
 </div>
 <div class="overlay" id="tutDone" hidden>
   <div class="card">
     <p class="sub">TUTORIAL</p>
     <h1 class="logo" style="font-size:40px">COMPLETE!</h1>
-    <p class="tip">これで操作はぜんぶ覚えました。本番では地面やビルにぶつかるとゲームオーバーです。</p>
-    <div class="btns"><button class="go" id="tutGo" type="button">本番スタート</button><button class="ghost" id="tutTitle" type="button">タイトルへ</button></div>
+    <p class="tip" data-en="You have learned all the controls. In the real game, hitting the ground or a building is game over.">これで操作はぜんぶ覚えました。本番では地面やビルにぶつかるとゲームオーバーです。</p>
+    <div class="btns"><button class="go" id="tutGo" type="button" data-en="Play for real">本番スタート</button><button class="ghost" id="tutTitle" type="button" data-en="Title">タイトルへ</button></div>
   </div>
 </div>
 <div class="overlay" id="over" hidden>
@@ -358,11 +371,15 @@ body.no-combo #combo{display:none}
     <p class="big"><b id="final">0</b><span> pt</span></p>
     <p class="record" id="record" hidden>NEW RECORD!</p>
     <p class="best" id="best"></p>
+    <p class="chalRes" id="chalRes" hidden></p>
     <dl class="breakdown" id="breakdown"></dl>
     <div class="stats" id="stats"></div>
+    <div class="share"><button class="ghost" id="shareBtn" type="button" data-en="Share / challenge a friend">結果をシェア・友達に挑戦</button>
+      <div id="sharePanel" hidden><textarea id="shareText" readonly rows="4" aria-label="share text"></textarea>
+        <div class="row3"><button class="ghost" id="shareX" type="button">X</button><button class="ghost" id="shareNative" type="button" data-en="Share">共有</button><button class="ghost" id="shareCopy" type="button" data-en="Copy">コピー</button></div></div></div>
     <div class="btns">
-      <button class="go" id="retry" type="button">もう一度</button>
-      <button class="ghost" id="toTitle" type="button">タイトルへ</button>
+      <button class="go" id="retry" type="button" data-en="Retry">もう一度</button>
+      <button class="ghost" id="toTitle" type="button" data-en="Title">タイトルへ</button>
     </div>
   </div>
 </div>
@@ -655,7 +672,7 @@ function pickItems() {
       a.g.visible = false; collected.add(a.it.key); tutEvent('item', { kind: a.it.kind });
       if (a.it.kind === 'blue') {
         bonus(1000, 'アイテム'); stats.blues++; comboMax += 5; comboTime += 1; comboT = comboTime;
-        const d = document.createElement('div'); d.className = 'blue'; d.textContent = '最大COMBO数＆継続時間↑（' + comboMax + ' / ' + comboTime + '秒）';
+        const d = document.createElement('div'); d.className = 'blue'; d.textContent = J('最大COMBO数＆継続時間↑（' + comboMax + ' / ' + comboTime + '秒）', 'MAX COMBO & TIME UP (' + comboMax + ' / ' + comboTime + ' s)');
         $('feed').appendChild(d); setTimeout(() => d.remove(), 1600);
       }
       else if (a.it.kind === 'silver') silverPickup();
@@ -783,7 +800,21 @@ const pos = new THREE.Vector3(), vel = new THREE.Vector3(), heading = new THREE.
 let state = 'title', best = 0, maxDist = 0, time = 0, lastSide = null;
 let mode = 'normal';                                      // 'normal' | 'dopa' (items x5) | 'super' (x10), each keeps its own best
 const BEST_KEY = { normal: 'wc-best-pt', dopa: 'wc-best-pt-dopa', super: 'wc-best-pt-super', kyoku: 'wc-best-pt-kyoku' }, bests = { normal: 0, dopa: 0, super: 0, kyoku: 0 };
-const MODE_NAME = { normal: '', dopa: 'ドパガキ', super: '超ドパガキ', kyoku: '極ドパガキ' };
+let lang = 'ja'; try { lang = localStorage.getItem('wc-lang') || ((navigator.language || '').toLowerCase().startsWith('ja') ? 'ja' : 'en'); } catch (e) { lang = (navigator.language || '').toLowerCase().startsWith('ja') ? 'ja' : 'en'; }
+const isEN = () => lang === 'en', J = (ja, en) => lang === 'en' ? en : ja;
+const MODE_NAME_JA = { normal: '', dopa: 'ドパガキ', super: '超ドパガキ', kyoku: '極ドパガキ' };
+const MODE_NAME_EN = { normal: '', dopa: 'DOPA KID', super: 'SUPER DOPA', kyoku: 'MAX DOPA' };
+const MODE_NAME = new Proxy({}, { get: (o, k) => (lang === 'en' ? MODE_NAME_EN : MODE_NAME_JA)[k] });
+const LABEL_EN = { 'アイテム': 'ITEM', '橋くぐり': 'BRIDGE DIVE', '橋に着地': 'BRIDGE LANDING', 'すれすれ': 'CLOSE CALL', 'Wスレスレ': 'DOUBLE CLOSE CALL', '地面すれすれ': 'GROUND SKIM', '着地': 'LANDING', '回転ジャンプ': 'SPIN JUMP', 'バックフリップ': 'BACKFLIP',
+  '地面に落下': 'Hit the ground', 'ビルに激突': 'Crashed into a building', '橋に激突': 'Crashed into a bridge' };
+function labelT(l) { if (lang !== 'en') return l; const m = /^(\d+)回転ジャンプ$/.exec(l); return m ? m[1] + 'x SPIN JUMP' : (LABEL_EN[l] || l); }
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-en]').forEach(el => { if (el.dataset.ja === undefined) el.dataset.ja = el.innerHTML; el.innerHTML = lang === 'en' ? el.dataset.en : el.dataset.ja; });
+  const jet = document.getElementById('jet'); if (jet) { if (!jet.dataset.jaLabel) jet.dataset.jaLabel = jet.getAttribute('aria-label'); jet.setAttribute('aria-label', lang === 'en' ? jet.dataset.enLabel : jet.dataset.jaLabel); }
+  const b = document.getElementById('langBtn'); if (b) b.textContent = lang === 'en' ? '日本語' : 'EN';
+  if (typeof showBests === 'function') showBests();
+}
 try { for (const m in BEST_KEY) bests[m] = +localStorage.getItem(BEST_KEY[m]) || 0; } catch (e) {}
 best = bests.normal;
 // score formats for the high-score displays: exponent (1.23e+6) with full kanji numerals underneath
@@ -808,7 +839,7 @@ function kanjiNum(n) {
   return out;
 }
 function setScore(el, n) { el.innerHTML = '<b>' + fmtFit(n, 7) + '</b>'; }
-function showBests() { if (typeof showLocks === 'function') showLocks(); setScore($('bestN'), bests.normal); setScore($('bestD'), bests.dopa); setScore($('bestS'), bests.super); setScore($('bestK'), bests.kyoku); }
+function showBests() { if (typeof showLocks === 'function') showLocks(); if (typeof showChallenge === 'function') showChallenge(); setScore($('bestN'), bests.normal); setScore($('bestD'), bests.dopa); setScore($('bestS'), bests.super); setScore($('bestK'), bests.kyoku); }
 const held = { L: false, R: false };
 
 function reset() {
@@ -870,7 +901,7 @@ const WIRE_LIFE = 5, WIRE_WARN = 1.5;
 function snapWire(s) {
   const r = ropes[s]; r.snapped = true;
   tmp.copy(pos).lerp(r.anchor, 0.5); burst(tmp, 30, 8);
-  detach(s); pop('ワイヤーが切れた！'); shakeT = Math.max(shakeT, 0.15);
+  detach(s); pop(J('ワイヤーが切れた！', 'WIRE SNAPPED!')); shakeT = Math.max(shakeT, 0.15);
 }
 function detach(side) {
   const r = ropes[side]; if (!r.on) return;
@@ -944,7 +975,7 @@ function bonus(pts, label, gold) {
   score += total;
   const cat = /回転ジャンプ$/.test(label) ? '回転ジャンプ' : label; tutEvent('bonus', { label: cat });
   const c = stats.cat[cat] || (stats.cat[cat] = { n: 0, pts: 0 }); c.n++; c.pts += total;
-  const d = document.createElement('div'); d.textContent = label + ' +' + total + (combo > 0 ? '（' + combo + 'コンボ ×' + rate.toFixed(2) + '）' : ''); if (gold) d.className = 'gold';
+  const d = document.createElement('div'); d.textContent = labelT(label) + ' +' + total + (combo > 0 ? J('（' + combo + 'コンボ ×' + rate.toFixed(2) + '）', ' (' + combo + ' COMBO ×' + rate.toFixed(2) + ')') : ''); if (gold) d.className = 'gold';
   comboHit();
   $('feed').appendChild(d); setTimeout(() => d.remove(), 1400);
   while ($('feed').children.length > 3) $('feed').firstChild.remove();
@@ -978,9 +1009,9 @@ function updateCombo(dt, paused) {
 }
 function showMul() {
   const parts = [];
-  if (spinMul > 1.001) parts.push('回転 ×' + spinMul.toFixed(2));
-  if (accelMul > 1.001) parts.push('加速 ×' + accelMul.toFixed(2));
-  if (jetMul < 0.999) parts.push('ジェット ' + (JET_CD * jetMul).toFixed(1) + '秒');
+  if (spinMul > 1.001) parts.push(J('回転', 'SPIN') + ' ×' + spinMul.toFixed(2));
+  if (accelMul > 1.001) parts.push(J('加速', 'ACCEL') + ' ×' + accelMul.toFixed(2));
+  if (jetMul < 0.999) parts.push(J('ジェット ', 'JET ') + (JET_CD * jetMul).toFixed(1) + J('秒', 's'));
   $('mul').textContent = parts.join(' ・ '); $('mul').hidden = !parts.length; retrigger($('mul'), 'bump');
 }
 function goldPickup() {
@@ -988,8 +1019,8 @@ function goldPickup() {
   spinMul *= SPIN_BOOST;
   if (flip) flip.rate *= SPIN_BOOST;                      // a jump already in the air speeds up too
   accelMul *= 1.1;
-  const d = document.createElement('div'); d.className = 'gold'; d.textContent = '回転スピードUP ×' + spinMul.toFixed(2);
-  const d2 = document.createElement('div'); d2.className = 'accel'; d2.textContent = '加速力UP ×' + accelMul.toFixed(2);
+  const d = document.createElement('div'); d.className = 'gold'; d.textContent = J('回転スピードUP', 'SPIN SPEED UP') + ' ×' + spinMul.toFixed(2);
+  const d2 = document.createElement('div'); d2.className = 'accel'; d2.textContent = J('加速力UP', 'ACCEL UP') + ' ×' + accelMul.toFixed(2);
   $('feed').appendChild(d); $('feed').appendChild(d2); setTimeout(() => d.remove(), 1400); setTimeout(() => d2.remove(), 1600);
   burst(pos, 50, 10); shakeT = Math.max(shakeT, 0.12); flashScreen('rgba(255,210,58,.22)');
   showMul(); comboHit(); stats.golds++;
@@ -998,8 +1029,8 @@ function goldPickup() {
 function silverPickup() {
   if (!feat('silver')) return;
   jetMul *= 0.9; jetCD = 0;
-  const d = document.createElement('div'); d.className = 'silver'; d.textContent = 'ジェット即回復！';
-  const d2 = document.createElement('div'); d2.className = 'jetup'; d2.textContent = 'ジェット時間 ×' + jetMul.toFixed(2) + '（' + (JET_CD * jetMul).toFixed(1) + '秒）';
+  const d = document.createElement('div'); d.className = 'silver'; d.textContent = J('ジェット即回復！', 'JET RECHARGED!');
+  const d2 = document.createElement('div'); d2.className = 'jetup'; d2.textContent = J('ジェット時間', 'JET COOLDOWN') + ' ×' + jetMul.toFixed(2) + J('（' + (JET_CD * jetMul).toFixed(1) + '秒）', ' (' + (JET_CD * jetMul).toFixed(1) + ' s)');
   $('feed').appendChild(d); $('feed').appendChild(d2); setTimeout(() => d.remove(), 1400); setTimeout(() => d2.remove(), 1600);
   burst(pos, 50, 10); shakeT = Math.max(shakeT, 0.12); flashScreen('rgba(230,240,255,.25)');
   retrigger($('jet'), 'refill');
@@ -1023,9 +1054,9 @@ function endFlip() {
   const f = flip; flip = null; body.rotation.x = 0;
   const n = Math.floor(f.ang / (Math.PI * 2));
   if (n < 1) return;
-  if (f.t < 1.5) { $('spinPts').textContent = '滞空不足'; $('spin').classList.add('fail'); spinHide = 0.9; return; }
+  if (f.t < 1.5) { $('spinPts').textContent = J('滞空不足', 'NOT ENOUGH AIR'); $('spin').classList.add('fail'); spinHide = 0.9; return; }
   const pts = spinPts(n); stats.maxSpin = Math.max(stats.maxSpin, n);
-  $('spinPts').textContent = '成功！ +' + pts; retrigger($('spin'), 'win'); spinHide = 1.3;
+  $('spinPts').textContent = J('成功！ +', 'NICE! +') + pts; retrigger($('spin'), 'win'); spinHide = 1.3;
   bonus(pts, n + '回転ジャンプ', n >= 3);
   burst(pos, Math.min(140, 60 + n * 20), 12 + n * 2); shakeT = Math.max(shakeT, 0.3);
 }
@@ -1033,7 +1064,7 @@ function pop(text) { $('pop').textContent = text; $('pop').style.opacity = 1; po
 function startGame(m) {
   if (typeof m === 'string') mode = m;
   tutEnd();
-  $('title').hidden = true; $('over').hidden = true; reset(); state = 'play';
+  $('title').hidden = true; $('over').hidden = true; reset(); state = 'play'; chalWon = false; $('target').hidden = true; $('sharePanel').hidden = true;
   touches.clear(); held.L = held.R = false; keys.L = keys.R = false; mouseSide = null;
   $('padL').classList.remove('on'); $('padR').classList.remove('on');
   pop('TAP!');
@@ -1043,7 +1074,7 @@ function gameOver(why) {
   if (tut) { tutRespawn(why); return; }
   state = 'over';
   for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; ropes[s].mark.visible = false; }
-  if (flip && flip.shown) { $('spinPts').textContent = '失敗…'; $('spin').classList.add('fail'); spinHide = 0.9; }
+  if (flip && flip.shown) { $('spinPts').textContent = J('失敗…', 'MISSED…'); $('spin').classList.add('fail'); spinHide = 0.9; }
   flip = null; body.rotation.x = 0;
   burst(pos, 80, 12); shakeT = 0.4; flashScreen('rgba(255,40,80,.3)');
   countPlay();
@@ -1051,18 +1082,22 @@ function gameOver(why) {
   const d = Math.floor(score), prevBest = best, isNew = d > prevBest && d > 0;
   if (isNew) { best = bests[mode] = d; try { localStorage.setItem(BEST_KEY[mode], String(best)); } catch (e) {} }
   $('overMode').textContent = MODE_NAME[mode] ? MODE_NAME[mode] + ' ・ ' : '';
-  $('why').textContent = why;
-  $('record').hidden = !isNew;
-  $('best').innerHTML = isNew ? (prevBest > 0 ? '前のベスト ' + fmtFit(prevBest, 13) + ' pt' : '初めての記録') : 'ベスト ' + fmtFit(best, 13) + ' pt（あと ' + fmtFit(best - d, 13) + ' pt）';
+  $('why').textContent = labelT(why);
+  $('record').hidden = !isNew; lastScore = d; $('sharePanel').hidden = true;
+  { const cr = $('chalRes'), on = !!challenge && challenge.mode === mode; cr.hidden = !on;
+    if (on) { const w = d > challenge.score; cr.classList.toggle('won', w);
+      cr.textContent = w ? J('挑戦成功！ ' + fmtFit(challenge.score, 13) + ' pt を ' + fmtFit(d - challenge.score, 13) + ' pt 上回った', 'Challenge won! Beat ' + fmtFit(challenge.score, 13) + ' pt by ' + fmtFit(d - challenge.score, 13) + ' pt')
+                         : J('挑戦失敗… 目標 ' + fmtFit(challenge.score, 13) + ' pt まであと ' + fmtFit(challenge.score - d + 1, 13) + ' pt', 'Challenge lost… ' + fmtFit(challenge.score - d + 1, 13) + ' pt short of ' + fmtFit(challenge.score, 13) + ' pt'); } }
+  $('best').innerHTML = isNew ? (prevBest > 0 ? J('前のベスト ', 'Previous best ') + fmtFit(prevBest, 13) + ' pt' : J('初めての記録', 'First record')) : J('ベスト ', 'Best ') + fmtFit(best, 13) + J(' pt（あと ', ' pt (') + fmtFit(best - d, 13) + J(' pt）', ' pt to go)');
   // breakdown
   const order = ['アイテム', '橋くぐり', '橋に着地', 'すれすれ', 'Wスレスレ', '地面すれすれ', '着地', '回転ジャンプ', 'バックフリップ'];
-  const rows = [['移動距離 ' + Math.floor(pathDist) + ' m', '', Math.round(stats.distPts)]];
-  for (const k of order) if (stats.cat[k]) rows.push([k, '×' + stats.cat[k].n, stats.cat[k].pts]);
+  const rows = [[J('移動距離 ', 'Distance ') + Math.floor(pathDist) + ' m', '', Math.round(stats.distPts)]];
+  for (const k of order) if (stats.cat[k]) rows.push([labelT(k), '×' + stats.cat[k].n, stats.cat[k].pts]);
   const esc = t => String(t).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]);
   $('breakdown').innerHTML = rows.map(r => '<dt>' + esc(r[0]) + '</dt><dd class="n">' + r[1] + '</dd><dd class="v">' + fmtFit(r[2], 9) + '</dd>').join('')
-    + '<dt class="total">合計</dt><dd class="total"></dd><dd class="total">' + fmtFit(d, 9) + '</dd>';
-  const st = [[stats.maxCombo, '最大コンボ'], [stats.maxSpin ? stats.maxSpin + '回転' : '-', '最多回転'], [Math.round(stats.maxSpeed * 3.6), '最高 km/h'],
-              [stats.blues, '青アイテム'], [stats.golds, '金アイテム'], [stats.silvers, '銀アイテム']];
+    + '<dt class="total">' + J('合計', 'Total') + '</dt><dd class="total"></dd><dd class="total">' + fmtFit(d, 9) + '</dd>';
+  const st = [[stats.maxCombo, J('最大コンボ', 'Max combo')], [stats.maxSpin ? stats.maxSpin + J('回転', 'x') : '-', J('最多回転', 'Most spins')], [Math.round(stats.maxSpeed * 3.6), J('最高 km/h', 'Top km/h')],
+              [stats.blues, J('青アイテム', 'Blue')], [stats.golds, J('金アイテム', 'Gold')], [stats.silvers, J('銀アイテム', 'Silver')]];
   $('stats').innerHTML = st.map(x => '<div><b>' + x[0] + '</b><small>' + x[1] + '</small></div>').join('');
   $('final').textContent = '0';
   setTimeout(() => {
@@ -1077,24 +1112,72 @@ $('start').addEventListener('click', () => startGame('normal'));
 // each ドパガキ mode unlocks after 10 runs of the mode before it (run counts kept in localStorage)
 const UNLOCK = { dopa: 'normal', super: 'dopa', kyoku: 'super' }, UNLOCK_RUNS = 10;
 const BEST_TILE = { dopa: 'bestD', super: 'bestS', kyoku: 'bestK' };
-const MODE_BTN = { dopa: ['startDopa', 'アイテム5倍'], super: ['startSuper', 'アイテム10倍'], kyoku: ['startKyoku', '金20倍・青銀10倍'] };
+const MODE_BTN = { dopa: ['startDopa', 'アイテム5倍', 'Items ×5'], super: ['startSuper', 'アイテム10倍', 'Items ×10'], kyoku: ['startKyoku', '金20倍・青銀10倍', 'Gold ×20, blue/silver ×10'] };
 let plays = { normal: 0, dopa: 0, super: 0, kyoku: 0 };
 try { Object.assign(plays, JSON.parse(localStorage.getItem('wc-plays') || '{}')); } catch (e) {}
 const unlocked = m => !UNLOCK[m] || plays[UNLOCK[m]] >= UNLOCK_RUNS;
 function countPlay() { plays[mode] = (plays[mode] || 0) + 1; try { localStorage.setItem('wc-plays', JSON.stringify(plays)); } catch (e) {} }
 function showLocks() {
   for (const m in MODE_BTN) {
-    const [id, sub] = MODE_BTN[m], el = $(id), ok = unlocked(m), prev = UNLOCK[m];
+    const [id, subJ, subE] = MODE_BTN[m], sub = J(subJ, subE), el = $(id), ok = unlocked(m), prev = UNLOCK[m];
     el.classList.toggle('locked', !ok); el.setAttribute('aria-disabled', String(!ok));
     el.firstChild.textContent = ok ? MODE_NAME[m] : '？？？';
     const tile = $(BEST_TILE[m]).parentNode; tile.classList.toggle('locked', !ok); tile.querySelector('small').textContent = ok ? MODE_NAME[m] : '？？？';
-    el.querySelector('small').textContent = ok ? sub : '🔒 ' + (unlocked(prev) ? (MODE_NAME[prev] || '通常') : '？？？') + 'をあと' + (UNLOCK_RUNS - plays[prev]) + '回';
+    el.querySelector('small').textContent = ok ? sub : (isEN() ? '🔒 ' + (UNLOCK_RUNS - plays[prev]) + ' more ' + (unlocked(prev) ? (MODE_NAME[prev] || 'Normal') : '？？？') + ' runs' : '🔒 ' + (unlocked(prev) ? (MODE_NAME[prev] || '通常') : '？？？') + 'をあと' + (UNLOCK_RUNS - plays[prev]) + '回');
   }
 }
+// ---------- challenge & share ----------
+const GAME_URL = 'https://claude.ai/artifact/CMqPVc3TCFD7aP3C69gmTt';
+const MODE_LETTER = { normal: 'N', dopa: 'D', super: 'S', kyoku: 'K' };
+let challenge = null, chalWon = false;
+function parseCode(t) { const m = /^\s*([NDSK])\s*-?\s*(\d{1,15})\s*$/i.exec(t || ''); if (!m) return null;
+  const mode = Object.keys(MODE_LETTER).find(k => MODE_LETTER[k] === m[1].toUpperCase()); return { mode, score: +m[2] }; }
+function chalCode(m, sc) { return MODE_LETTER[m] + '-' + sc; }
+function readChallengeURL() {
+  try { const q = new URLSearchParams(location.search || location.hash.replace(/^#/, '?'));
+    const sc = parseInt(q.get('challenge'), 10), m = q.get('mode') || 'normal';
+    if (sc > 0 && MODE_LETTER[m]) challenge = { mode: m, score: sc }; else if (q.get('c')) challenge = parseCode(q.get('c')); } catch (e) {}
+}
+function modeLabel(m) { return MODE_NAME[m] || J('通常', 'Normal'); }
+function showChallenge() {
+  $('chal').hidden = !challenge; if (!challenge) return;
+  const lockedTxt = unlocked(challenge.mode) ? '' : J('（このモードはまだ未解放）', ' (this mode is still locked)');
+  $('chalT').textContent = J('挑戦状：' + (unlocked(challenge.mode) ? modeLabel(challenge.mode) : '？？？') + 'で ' + fmtFit(challenge.score, 13) + ' pt を超えろ！',
+    'Challenge: beat ' + fmtFit(challenge.score, 13) + ' pt in ' + (unlocked(challenge.mode) ? modeLabel(challenge.mode) : '？？？') + '!') + lockedTxt;
+}
+function updateTarget() {
+  const el = $('target'); const on = !!challenge && challenge.mode === mode && !tut; el.hidden = !on; if (!on) return;
+  const won = score > challenge.score;
+  el.textContent = won ? J('挑戦クリア！', 'CHALLENGE BEATEN!') : J('目標 ', 'Target ') + fmtFit(challenge.score, 9);
+  el.classList.toggle('won', won);
+  if (won && !chalWon) { chalWon = true; pop(J('挑戦クリア！', 'CHALLENGE BEATEN!')); }
+}
+function shareText(sc) {
+  const name = mode === 'normal' ? '' : J('【' + modeLabel(mode) + '】', ' [' + modeLabel(mode) + ']');
+  return J('WIRE NINJA' + name + 'で ' + fmtFit(sc, 13) + ' pt 出した！これを超えられる？\n挑戦コード: ' + chalCode(mode, sc),
+    'I scored ' + fmtFit(sc, 13) + ' pt in WIRE NINJA' + name + '! Can you beat it?\nChallenge code: ' + chalCode(mode, sc));
+}
+function shareURL(sc) { return GAME_URL + '?challenge=' + sc + '&mode=' + mode; }
+let lastScore = 0;
+$('shareBtn').addEventListener('click', () => { const t = shareText(lastScore) + '\n' + shareURL(lastScore); $('shareText').value = t; $('sharePanel').hidden = false; $('shareNative').hidden = !navigator.share; });
+$('shareX').addEventListener('click', () => { window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(shareText(lastScore)) + '&url=' + encodeURIComponent(shareURL(lastScore)), '_blank', 'noopener'); });
+$('shareNative').addEventListener('click', () => { if (navigator.share) navigator.share({ title: 'WIRE NINJA', text: shareText(lastScore), url: shareURL(lastScore) }).catch(() => {}); });
+$('shareCopy').addEventListener('click', () => { const ta = $('shareText'); ta.focus(); ta.select();
+  const done = () => pop(J('コピーしました', 'Copied'));
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(ta.value).then(done, () => { try { document.execCommand('copy'); done(); } catch (e) {} });
+  else { try { document.execCommand('copy'); done(); } catch (e) {} } });
+$('codeBtn').addEventListener('click', () => { $('codeBox').hidden = false; $('codeBtn').hidden = true; $('codeIn').focus(); });
+const acceptCode = () => { const c = parseCode($('codeIn').value); if (!c) { retrigger($('codeIn'), 'shake'); return; }
+  challenge = c; $('codeBox').hidden = true; $('codeBtn').hidden = false; $('codeIn').value = ''; showChallenge(); };
+$('codeOk').addEventListener('click', acceptCode);
+$('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') acceptCode(); });
+$('chalX').addEventListener('click', () => { challenge = null; showChallenge(); });
+$('chalGo').addEventListener('click', () => { if (!challenge) return; if (challenge.mode === 'normal') { startGame('normal'); return; } tryMode(challenge.mode, J('挑戦スタート！', 'CHALLENGE ON!')); });
+readChallengeURL();
 const tryMode = (m, msg) => { if (!unlocked(m)) { retrigger($(MODE_BTN[m][0]), 'shake'); return; } startGame(m); pop(msg); };
-$('startDopa').addEventListener('click', () => tryMode('dopa', 'ドパガキモード！'));
-$('startSuper').addEventListener('click', () => tryMode('super', '超ドパガキ！！'));
-$('startKyoku').addEventListener('click', () => tryMode('kyoku', '極ドパガキ！！！'));
+$('startDopa').addEventListener('click', () => tryMode('dopa', J('ドパガキモード！', 'DOPA KID MODE!')));
+$('startSuper').addEventListener('click', () => tryMode('super', J('超ドパガキ！！', 'SUPER DOPA!!')));
+$('startKyoku').addEventListener('click', () => tryMode('kyoku', J('極ドパガキ！！！', 'MAX DOPA!!!')));
 $('rulesBtn').addEventListener('click', () => { $('title').hidden = true; $('rules').hidden = false; });
 $('rulesClose').addEventListener('click', () => { $('rules').hidden = true; $('title').hidden = false; });
 $('retry').addEventListener('click', () => startGame());
@@ -1118,26 +1201,26 @@ function tutItemKinds() {
   return feat('silver') ? true : false;
 }
 const TUT = [
-  { t: '左ワイヤー', d: '画面の<b>左半分</b>を押し続けて、左のビルにぶら下がろう（1秒）', goal: 1, tick: (s, dt) => ropes.L.on ? dt : 0 },
-  { t: '右ワイヤー', d: '今度は<b>右半分</b>を押し続けて、右のビルにぶら下がろう（1秒）', goal: 1, tick: (s, dt) => ropes.R.on ? dt : 0 },
-  { t: '離して飛ぶ', d: '振り子の<b>一番下を少し過ぎたところ</b>で指を離すと、前へ大きく飛べる。離して1秒空中にいよう', goal: 1,
+  { t: '左ワイヤー', te: 'Left wire', de: 'Hold the <b>left half</b> of the screen to hang from a building on the left (1 s)', d: '画面の<b>左半分</b>を押し続けて、左のビルにぶら下がろう（1秒）', goal: 1, tick: (s, dt) => ropes.L.on ? dt : 0 },
+  { t: '右ワイヤー', te: 'Right wire', de: 'Now hold the <b>right half</b> to hang from a building on the right (1 s)', d: '今度は<b>右半分</b>を押し続けて、右のビルにぶら下がろう（1秒）', goal: 1, tick: (s, dt) => ropes.R.on ? dt : 0 },
+  { t: '離して飛ぶ', te: 'Let go & fly', de: 'Release <b>just past the bottom</b> of the swing to fly far forward. Stay in the air for 1 s', d: '振り子の<b>一番下を少し過ぎたところ</b>で指を離すと、前へ大きく飛べる。離して1秒空中にいよう', goal: 1,
     on: (s, e) => { if (e.type === 'release') s.armed = true; if (e.type === 'attach') s.armed = false; }, tick: (s, dt) => s.armed && !onRoof ? dt : (s.v = 0, 0) },
-  { t: '左右でつなぐ', d: '左右のワイヤーを<b>交互に</b>使って、落ちずに <b>300m</b> 進もう。ワイヤーは<b>5秒で切れる</b>（赤く点滅したら切れる合図）', goal: 300, tick: (s, dt) => Math.hypot(vel.x, vel.z) * dt },
-  { t: '巻き取り', unlock: 'reel', d: 'ワイヤーを刺したまま<b>指を上にスライド</b>すると巻き取れる。<b>8m</b> 巻き取ろう', goal: 8, on: (s, e) => e.type === 'reel' ? e.amt : 0 },
-  { t: 'ジェット', unlock: 'jet', d: '中央下のジェットの<b>押した方向</b>に急加速する（本番は10秒に1回、練習中は3秒）。好きな方向に使ってみよう', goal: 2, count: true, on: (s, e) => e.type === 'jet' ? 1 : 0 },
-  { t: 'すれすれ', unlock: 'near', d: 'ビルの横（3m以内）や地面の近く（4m未満）を<b>ぶつからずに</b>通り抜けよう', goal: 1, on: (s, e) => e.type === 'bonus' && NEAR_CATS.includes(e.label) ? 1 : 0 },
-  { t: '青アイテム', unlock: 'blue', d: '大通りに浮かぶ<b>青いアイテム</b>を取ろう。1000pt ＋ コンボ上限+5・コンボ時間+1秒', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'blue' ? 1 : 0 },
-  { t: '金アイテム', unlock: 'gold', d: '<b>金のアイテム</b>を取ろう。点数はないけど、取るたびに回転スピード×1.2・加速×1.1（そのゲーム中ずっと）', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'gold' ? 1 : 0 },
-  { t: '銀アイテム', unlock: 'silver', d: '<b>銀のアイテム</b>を取ろう。取ると<b>ジェットが即回復</b>して、ジェットの待ち時間も10%短くなる（そのゲーム中ずっと）', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'silver' ? 1 : 0 },
-  { t: '橋くぐり', unlock: 'bridge', d: 'ビルの間にかかった<b>橋の下</b>をくぐろう。<b>低い橋ほど高得点</b>（水色500 → ピンク → 金2000pt）。橋にぶつかると失敗', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '橋くぐり' ? 1 : 0 },
-  { t: '屋上に着地', unlock: 'roof', d: 'ビルの<b>屋上に上から</b>落ちると走れる（端で自動ジャンプ）。ジェット↑で高く上がるとやりやすい', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '着地' ? 1 : 0 },
-  { t: '回転ジャンプ', unlock: 'spin', d: '<b>勢いよく上に飛びながら</b>離すと回転する。1回転以上・1.5秒以上の滞空で成功', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '回転ジャンプ' ? 1 : 0 },
-  { t: 'バックフリップ', unlock: 'back', d: 'ワイヤーを刺したまま<b>巻き取りすぎて</b>、進む向きを<b>180°逆</b>にしよう（+1000pt）', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === 'バックフリップ' ? 1 : 0 },
-  { t: 'コンボ', unlock: 'combo', d: 'ボーナスを<b>3秒以内に続けて</b>取るとコンボがつながり、点数が上乗せされる。<b>3コンボ</b>を2回しよう', goal: 2, count: true, on: (s, e) => e.type === 'combo' && e.n === 3 ? 1 : 0 },
+  { t: '左右でつなぐ', te: 'Chain swings', de: 'Use the left and right wires <b>alternately</b> and travel <b>300 m</b> without falling. Wires <b>snap after 5 s</b> (they blink red first)', d: '左右のワイヤーを<b>交互に</b>使って、落ちずに <b>300m</b> 進もう。ワイヤーは<b>5秒で切れる</b>（赤く点滅したら切れる合図）', goal: 300, tick: (s, dt) => Math.hypot(vel.x, vel.z) * dt },
+  { t: '巻き取り', te: 'Reel in', de: 'While attached, <b>slide your finger up</b> to reel in. Reel in <b>8 m</b>', unlock: 'reel', d: 'ワイヤーを刺したまま<b>指を上にスライド</b>すると巻き取れる。<b>8m</b> 巻き取ろう', goal: 8, on: (s, e) => e.type === 'reel' ? e.amt : 0 },
+  { t: 'ジェット', te: 'Jet', de: 'The jet at the bottom boosts you in the <b>pressed direction</b> (every 10 s in the game, 3 s here). Try it in any direction', unlock: 'jet', d: '中央下のジェットの<b>押した方向</b>に急加速する（本番は10秒に1回、練習中は3秒）。好きな方向に使ってみよう', goal: 2, count: true, on: (s, e) => e.type === 'jet' ? 1 : 0 },
+  { t: 'すれすれ', te: 'Close call', de: 'Pass right next to a building (within 3 m) or near the ground (below 4 m) <b>without hitting it</b>', unlock: 'near', d: 'ビルの横（3m以内）や地面の近く（4m未満）を<b>ぶつからずに</b>通り抜けよう', goal: 1, on: (s, e) => e.type === 'bonus' && NEAR_CATS.includes(e.label) ? 1 : 0 },
+  { t: '青アイテム', te: 'Blue item', de: 'Grab the <b>blue items</b> floating over the avenues. 1000pt + combo cap +5, combo time +1 s', unlock: 'blue', d: '大通りに浮かぶ<b>青いアイテム</b>を取ろう。1000pt ＋ コンボ上限+5・コンボ時間+1秒', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'blue' ? 1 : 0 },
+  { t: '金アイテム', te: 'Gold item', de: 'Grab the <b>gold items</b>. No points, but each one gives spin speed ×1.2 and acceleration ×1.1 for the rest of the run', unlock: 'gold', d: '<b>金のアイテム</b>を取ろう。点数はないけど、取るたびに回転スピード×1.2・加速×1.1（そのゲーム中ずっと）', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'gold' ? 1 : 0 },
+  { t: '銀アイテム', te: 'Silver item', de: 'Grab the <b>silver items</b>. Each one <b>refills the jet instantly</b> and cuts its cooldown by 10% for the rest of the run', unlock: 'silver', d: '<b>銀のアイテム</b>を取ろう。取ると<b>ジェットが即回復</b>して、ジェットの待ち時間も10%短くなる（そのゲーム中ずっと）', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'silver' ? 1 : 0 },
+  { t: '橋くぐり', te: 'Bridge dive', de: 'Fly <b>under a bridge</b> between buildings. <b>Lower bridges pay more</b> (cyan 500 → pink → gold 2000pt). Hitting a bridge fails', unlock: 'bridge', d: 'ビルの間にかかった<b>橋の下</b>をくぐろう。<b>低い橋ほど高得点</b>（水色500 → ピンク → 金2000pt）。橋にぶつかると失敗', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '橋くぐり' ? 1 : 0 },
+  { t: '屋上に着地', te: 'Rooftop landing', de: 'Drop onto a <b>rooftop from above</b> to run (you jump automatically at the edge). Jet ↑ to get high first', unlock: 'roof', d: 'ビルの<b>屋上に上から</b>落ちると走れる（端で自動ジャンプ）。ジェット↑で高く上がるとやりやすい', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '着地' ? 1 : 0 },
+  { t: '回転ジャンプ', te: 'Spin jump', de: 'Release while <b>flying up fast</b> to spin. Succeeds with 1+ rotation and 1.5 s+ of air', unlock: 'spin', d: '<b>勢いよく上に飛びながら</b>離すと回転する。1回転以上・1.5秒以上の滞空で成功', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '回転ジャンプ' ? 1 : 0 },
+  { t: 'バックフリップ', te: 'Backflip', de: 'While attached, <b>reel in too much</b> so you turn <b>180°</b> around (+1000pt)', unlock: 'back', d: 'ワイヤーを刺したまま<b>巻き取りすぎて</b>、進む向きを<b>180°逆</b>にしよう（+1000pt）', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === 'バックフリップ' ? 1 : 0 },
+  { t: 'コンボ', te: 'Combo', de: 'Chain bonuses <b>within 3 s</b> to build a combo that adds points. Reach <b>3 combo</b> twice', unlock: 'combo', d: 'ボーナスを<b>3秒以内に続けて</b>取るとコンボがつながり、点数が上乗せされる。<b>3コンボ</b>を2回しよう', goal: 2, count: true, on: (s, e) => e.type === 'combo' && e.n === 3 ? 1 : 0 },
 ];
 function tutShow() {
   const L = TUT[tut.i];
-  $('tutNo').textContent = (tut.i + 1) + '/' + TUT.length; $('tutT').textContent = L.t; $('tutD').innerHTML = L.d;
+  $('tutNo').textContent = (tut.i + 1) + '/' + TUT.length; $('tutT').textContent = J(L.t, L.te); $('tutD').innerHTML = J(L.d, L.de);
   $('tut').classList.remove('ok'); $('tutBar').style.width = '0%';
   $('tutCnt').textContent = L.count ? '0 / ' + L.goal : '';
 }
@@ -1150,7 +1233,7 @@ function tutSet(i) {
   touches.clear(); held.L = held.R = false; keys.L = keys.R = false; mouseSide = null;
   document.body.classList.toggle('no-combo', !feat('combo'));
   const L = TUT[i];
-  $('trNo').textContent = 'STEP ' + (i + 1) + ' / ' + TUT.length; $('trT').textContent = L.t; $('trD').innerHTML = L.d + (L.count ? '<br><b>' + L.goal + '回</b>できたらクリア' : '');
+  $('trNo').textContent = 'STEP ' + (i + 1) + ' / ' + TUT.length; $('trT').textContent = J(L.t, L.te); $('trD').innerHTML = J(L.d, L.de) + (L.count ? J('<br><b>' + L.goal + '回</b>できたらクリア', '<br>Clear it <b>' + L.goal + ' times</b>') : '');
   $('tutReady').hidden = false;
 }
 function tutBegin() {
@@ -1161,7 +1244,7 @@ function tutAdd(x) {
   if (!tut || tut.clear || !x) return;
   const L = TUT[tut.i]; tut.s.v += x;
   $('tutBar').style.width = Math.min(100, tut.s.v / L.goal * 100) + '%';
-  if (L.count) { $('tutCnt').textContent = Math.min(tut.s.v, L.goal) + ' / ' + L.goal; if (tut.s.v < L.goal) { retrigger($('tutCnt'), 'bump'); pop('あと' + (L.goal - tut.s.v) + '回！'); } }
+  if (L.count) { $('tutCnt').textContent = Math.min(tut.s.v, L.goal) + ' / ' + L.goal; if (tut.s.v < L.goal) { retrigger($('tutCnt'), 'bump'); pop(J('あと' + (L.goal - tut.s.v) + '回！', (L.goal - tut.s.v) + ' MORE!')); } }
   if (tut.s.v >= L.goal) { tut.clear = 1.1; $('tut').classList.add('ok'); burst(pos, 50, 10); flashScreen('rgba(255,181,58,.18)'); }
 }
 function tutEvent(type, e) {
@@ -1182,7 +1265,7 @@ function tutRespawn(why) {
   burst(pos, 60, 10); flashScreen('rgba(255,40,80,.25)'); shakeT = 0.3;
   pos.set(0, 50, pos.z); vel.set(0, 7, -24); heading.set(0, 0, -1); camHead.copy(heading); uHist.length = 0;
   rebuildCity(pos.x, pos.z); camera.position.copy(pos).addScaledVector(heading, -11).add(T.set(0, 4.5, 0));
-  pop(why + '　もう一度！');
+  pop(labelT(why) + J('　もう一度！', ' — TRY AGAIN!'));
 }
 function tutFinish() {
   state = 'over'; $('tut').hidden = true;
@@ -1215,7 +1298,8 @@ $('tReset').addEventListener('click', () => { Object.assign(P, DEFAULTS); syncTu
 function setTune(open) { $('tune').hidden = !open; $('paused').hidden = !open; }
 $('gear').addEventListener('click', () => setTune($('tune').hidden));
 $('tClose').addEventListener('click', () => setTune(false));
-syncTune(); showBests();
+syncTune(); applyLang();
+$('langBtn').addEventListener('click', () => { lang = lang === 'en' ? 'ja' : 'en'; try { localStorage.setItem('wc-lang', lang); } catch (e) {} applyLang(); });
 // jet pad: the whole circle is the button; the quadrant you press picks the direction
 function jetPress(x, y) {
   const r = $('jet').getBoundingClientRect(), dx = x - (r.left + r.width / 2), dy = y - (r.top + r.height / 2);
@@ -1418,7 +1502,7 @@ function frame(now) {
       el.querySelector('em').textContent = (reeling ? '▲ ' : '') + Math.round(r.len) + ' m';
       const span = Math.max(1, (r.len0 || r.len) - 8);
       el.querySelector('u').style.transform = 'scaleX(' + Math.max(0.02, Math.min(1, (r.len - 8) / span)) + ')';
-      el.querySelector('small').textContent = reeling ? '巻き取り中' : '上スライドで巻き取り';
+      el.querySelector('small').textContent = reeling ? J('巻き取り中', 'REELING') : J('上スライドで巻き取り', 'SLIDE UP TO REEL');
       el.classList.toggle('reeling', reeling);
     }
   }
@@ -1449,7 +1533,7 @@ function frame(now) {
 
   // HUD
   if (state === 'play') {
-    $('score').textContent = Math.floor(score).toLocaleString();
+    $('score').textContent = Math.floor(score).toLocaleString(); if (challenge) updateTarget();
     $('dist').textContent = Math.floor(pathDist);
     $('spd').textContent = Math.round(sp * 3.6);
     $('warn').style.opacity = pos.y < 12 ? (Math.sin(now / 80) > 0 ? 1 : 0.3) : 0;
@@ -1489,6 +1573,6 @@ reset();
 requestAnimationFrame(frame);
 
 // test hook
-window.__wc = { renderer, step, findAnchor, attach, detach, rebuildCity, heading, get state() { return state; }, set state(v) { state = v; }, pos, vel, ropes, held, setHeld, startGame, P, get dist() { return maxDist; }, get score() { return score; }, get flip() { return flip; }, get onRoof() { return onRoof; }, fireJet, get jetCD() { return jetCD; }, activeItems, bridge, get tut() { return tut; }, startTutorial };
+window.__wc = { renderer, step, findAnchor, attach, detach, rebuildCity, heading, get state() { return state; }, set state(v) { state = v; }, pos, vel, ropes, held, setHeld, startGame, P, get dist() { return maxDist; }, get score() { return score; }, get flip() { return flip; }, get onRoof() { return onRoof; }, fireJet, get jetCD() { return jetCD; }, activeItems, bridge, get tut() { return tut; }, startTutorial, get challenge() { return challenge; }, set challenge(v) { challenge = v; }, setLang: l => { lang = l; applyLang(); } };
 })();
 </script>
