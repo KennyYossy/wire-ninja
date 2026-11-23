@@ -123,13 +123,13 @@ body.no-combo #combo{display:none}
 #spin.lv2 i{color:#9ad8ff;font-size:26px;text-shadow:0 0 6px #9ad8ff}
 #spin.lv3 i{color:#7dffb0;font-size:28px;text-shadow:0 0 8px #7dffb0}
 #spin.lv4 i{color:var(--amber);font-size:32px;text-shadow:0 0 12px var(--amber)}
-#spin.lv5 i{color:var(--magenta);font-size:36px;text-shadow:0 0 14px var(--magenta),0 0 28px var(--magenta)}
-#spin.lv6 i{font-size:40px;color:#fff;-webkit-text-stroke:2px var(--magenta);text-shadow:0 0 16px var(--cyan),0 0 32px var(--magenta)}
+#spin.lv5 i{color:var(--magenta);font-size:36px;text-shadow:0 0 10px var(--magenta)}
+#spin.lv6 i{font-size:40px;color:#fff;-webkit-text-stroke:2px var(--magenta);text-shadow:0 0 10px var(--magenta)}
 #spin.lv7 i,#spin.lv8 i{font-size:min(40px,10vw);color:transparent;-webkit-background-clip:text;background-clip:text;
   background-image:linear-gradient(90deg,#35f2ff,#ff3fb4,#ffb53a,#7dffb0,#35f2ff);background-size:200% 100%;animation:tick .5s cubic-bezier(.2,1.8,.4,1),rainbow 1s linear infinite;
   filter:drop-shadow(0 0 10px rgba(255,255,255,.7))}
-#spin.lv8 i{font-size:min(40px,9.5vw);letter-spacing:.02em;filter:drop-shadow(0 0 14px #fff) drop-shadow(0 0 30px #ff3fb4)}
-#spin.lv8 b{font-size:110px;-webkit-text-stroke:4px #ffb53a;text-shadow:0 0 30px #ff3fb4,0 0 60px #35f2ff}
+#spin.lv8 i{font-size:min(40px,9.5vw);letter-spacing:.02em}
+#spin.lv8 b{font-size:110px;-webkit-text-stroke:4px #ffb53a;text-shadow:0 0 16px #ff3fb4}
 #spin.lv7 b{font-size:92px;-webkit-text-stroke:3px var(--cyan)}
 #spin.lv6 b{font-size:84px}
 @keyframes rainbow{to{background-position:-200% 0}}
@@ -207,14 +207,14 @@ body.no-combo #combo{display:none}
 .rulecard .go{align-self:center;margin-top:8px}
 
 #feed{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
-#feed div{font:700 17px var(--display);color:var(--amber);white-space:nowrap;-webkit-text-stroke:1px rgba(0,0,0,.5);text-shadow:0 0 12px rgba(255,181,58,.9),0 0 30px rgba(255,63,180,.6);animation:feed 1.4s cubic-bezier(.2,1.6,.4,1) forwards}
-#feed div.blue{color:#8fc9ff;text-shadow:0 0 12px #4fa8ff,0 0 26px #4fa8ff}
-#feed div.silver{color:#f2f7ff;font-size:26px;text-shadow:0 0 14px #cfe3ff,0 0 36px #8fc9ff}
+#feed div{font:700 17px var(--display);color:var(--amber);white-space:nowrap;text-shadow:0 0 8px rgba(255,181,58,.8);animation:feed 1.4s ease-out forwards}
+#feed div.blue{color:#8fc9ff;text-shadow:0 0 8px #4fa8ff}
+#feed div.silver{color:#f2f7ff;font-size:26px;text-shadow:0 0 8px #cfe3ff}
 #jet.refill{animation:bump .4s cubic-bezier(.2,1.8,.4,1)}
-#feed div.jetup{color:#ffffff;font-size:20px;text-shadow:0 0 12px #9ad8ff,0 0 26px #ffffff}
-#feed div.accel{color:#ffb070;font-size:22px;text-shadow:0 0 12px #ff7a2a,0 0 30px #ffd23a}
-#feed div.gold{color:#ffe066;font-size:26px;text-shadow:0 0 14px #ffd23a,0 0 40px #ff3fb4}
-@keyframes feed{0%{opacity:0;transform:scale(1.5) rotate(-3deg)}18%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-30px) scale(.9)}}
+#feed div.jetup{color:#ffffff;font-size:20px;text-shadow:0 0 8px #9ad8ff}
+#feed div.accel{color:#ffb070;font-size:22px;text-shadow:0 0 8px #ff7a2a}
+#feed div.gold{color:#ffe066;font-size:26px;text-shadow:0 0 8px #ffd23a}
+@keyframes feed{0%{opacity:0;transform:translateY(8px)}15%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-16px)}}
 @media (prefers-reduced-motion:reduce){#feed div,#spin b,#spin em,#score.bump,#flash.go{animation:none}}
 .len{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 172px);font:700 14px var(--display);font-variant-numeric:tabular-nums;
   padding:4px 8px;border-radius:8px;border:1px solid currentColor;background:rgba(8,5,18,.6);transition:transform .1s}
@@ -388,7 +388,7 @@ const CELL = 36, VIEW_CELLS = 8, MAXV = 55, REEL = 1.5, AIM_FWD = 45, AIM_UP = 3
 // ---------- renderer / scene ----------
 const canvas = document.getElementById('game');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-let pixelCap = 1.5, slowAvg = 16, slowT = 0; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, pixelCap));
+let pixelCap = 1.25, slowAvg = 16, slowT = 0; renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, pixelCap));
 const scene = new THREE.Scene();
 const SKY = 0x0b0716;
 scene.background = new THREE.Color(SKY);
@@ -661,14 +661,14 @@ function pickItems() {
 }
 
 // ---------- fx: sparks, flash, shake ----------
-const SPARKS = 240, spGeo = new THREE.BufferGeometry();
+const SPARKS = 120, spGeo = new THREE.BufferGeometry();
 const spPos = new Float32Array(SPARKS * 3), spCol = new Float32Array(SPARKS * 3), spVel = new Float32Array(SPARKS * 3), spLife = new Float32Array(SPARKS);
 spGeo.setAttribute('position', new THREE.BufferAttribute(spPos, 3)); spGeo.setAttribute('color', new THREE.BufferAttribute(spCol, 3));
 const sparks = new THREE.Points(spGeo, new THREE.PointsMaterial({ size: 0.45, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
 sparks.frustumCulled = false; scene.add(sparks);
 let spNext = 0, shakeT = 0;
 const FX_COLORS = [0x35f2ff, 0xff3fb4, 0xffb53a, 0xffffff, 0xffd23a];
-const FX_SCALE = 0.45;                                    // fewer sparks per burst: lighter on phones, colour flashes carry the punch
+const FX_SCALE = 0.2;                                    // fewer sparks per burst: lighter on phones, colour flashes carry the punch
 function burst(at, count, speed) {
   count = Math.ceil(count * FX_SCALE);
   for (let n = 0; n < count; n++) {
@@ -941,7 +941,7 @@ function bonus(pts, label, gold) {
   const d = document.createElement('div'); d.textContent = label + ' +' + total + (combo > 0 ? '（' + combo + 'コンボ ×' + rate.toFixed(2) + '）' : ''); if (gold) d.className = 'gold';
   comboHit();
   $('feed').appendChild(d); setTimeout(() => d.remove(), 1400);
-  while ($('feed').children.length > 5) $('feed').firstChild.remove();
+  while ($('feed').children.length > 3) $('feed').firstChild.remove();
   burst(pos, Math.min(90, 12 + pts / 10), 7 + pts / 120);
   shakeT = Math.max(shakeT, Math.min(0.3, 0.06 + pts / 2600));
   flashScreen(gold ? 'rgba(255,210,58,.3)' : pts >= 500 ? 'rgba(53,242,255,.22)' : 'rgba(255,63,180,.12)');
@@ -1009,8 +1009,6 @@ function spinTick(n) {
   retrigger(el, 'tick'); spinHide = 9;
   // effects grow with the rank: modest at GOOD, lavish at UNBELIEVABLE
   burst(pos, 15 + lv * 18, 6 + lv * 2);
-  if (lv >= 6) setTimeout(() => burst(pos, lv * 13, 10 + lv * 2), 160);
-  if (lv >= 8) setTimeout(() => burst(pos, 120, 22), 320);
   shakeT = Math.max(shakeT, Math.min(0.45, 0.04 + lv * 0.05));
   flashScreen(['rgba(53,242,255,.08)', 'rgba(154,216,255,.1)', 'rgba(125,255,176,.12)', 'rgba(255,181,58,.16)', 'rgba(255,63,180,.2)', 'rgba(255,255,255,.24)', 'rgba(255,210,58,.3)', 'rgba(255,255,255,.42)'][lv - 1]);
 }
@@ -1341,7 +1339,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   let dt = Math.min(0.05, (now - last) / 1000); last = now;
   // auto quality: if frames stay slow for ~2 s while playing, render at lower resolution
-  if (state === 'play') { slowAvg += ((now - (frame.prev || now)) - slowAvg) * 0.05; if (slowAvg > 26 && pixelCap > 1) { if ((slowT += dt) > 2) { pixelCap = 1; renderer.setPixelRatio(1); resize(); } } else slowT = 0; }
+  if (state === 'play') { slowAvg += ((now - (frame.prev || now)) - slowAvg) * 0.05; if (slowAvg > 22 && pixelCap > 1) { if ((slowT += dt) > 2) { pixelCap = 1; renderer.setPixelRatio(1); resize(); } } else slowT = 0; }
   frame.prev = now;
   const paused = !$('tune').hidden;
   if (state === 'play' && !paused) {
@@ -1416,7 +1414,7 @@ function frame(now) {
   camTarget.copy(pos).addScaledVector(camHead, -11).add(tmp.set(0, 4.2, 0));
   if (state !== 'over') camera.position.lerp(camTarget, 1 - Math.exp(-7 * dt));
   camera.lookAt(look.copy(pos).addScaledVector(camHead, 9).add(tmp.set(0, 0.5, 0)));
-  if (shakeT > 0) { shakeT = Math.max(0, shakeT - dt); const a = shakeT * 1.6; camera.position.x += (Math.random() - 0.5) * a; camera.position.y += (Math.random() - 0.5) * a; camera.rotation.z += (Math.random() - 0.5) * a * 0.05; }
+  if (shakeT > 0) { shakeT = Math.max(0, shakeT - dt); const a = shakeT * 0.6; /* gentler shake */ camera.position.x += (Math.random() - 0.5) * a; camera.position.y += (Math.random() - 0.5) * a; camera.rotation.z += (Math.random() - 0.5) * a * 0.05; }
   updateJet(dt, now, paused);
   updateSparks(dt);
   if (spinHide > 0) { spinHide -= dt; if (spinHide <= 0) $('spin').hidden = true; }
