@@ -190,6 +190,9 @@ body.no-combo #combo{display:none}
 .go.dopa{background:linear-gradient(90deg,#35f2ff,#ff3fb4,#ffd23a);color:#140a24;box-shadow:0 0 22px rgba(255,63,180,.55)}
 .go small{display:block;font:700 11px var(--body);letter-spacing:.1em;opacity:.8;margin-top:2px}
 .row2{display:flex;gap:10px}.row2 .ghost,.row2 .go{flex:1;padding:11px 8px}
+.go.locked{filter:grayscale(.85) brightness(.6);animation:none;box-shadow:none}
+.go.locked.shake{animation:lockshake .3s}
+@keyframes lockshake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .go.super{background:linear-gradient(90deg,#ffd23a,#ff3fb4,#9b6bff,#35f2ff);background-size:300% 100%;animation:superbg 2.4s linear infinite;box-shadow:0 0 26px rgba(255,210,58,.6)}
 @keyframes superbg{to{background-position:300% 0}}
 .bests small{white-space:nowrap}
@@ -275,7 +278,7 @@ body.no-combo #combo{display:none}
 
 <div class="overlay" id="title">
   <div class="card">
-    <p class="sub">NEON NIGHT DELIVERY</p>
+    <p class="sub">NEON NIGHT SWING</p>
     <h1 class="logo">WIRE<br>COURIER</h1>
     <div class="bests"><div><small>ベスト</small><span class="sc" id="bestN"></span></div><div class="dopa"><small>ドパガキ</small><span class="sc" id="bestD"></span></div><div class="dopa super"><small>超ドパガキ</small><span class="sc" id="bestS"></span></div><div class="dopa kyoku"><small>極ドパガキ</small><span class="sc" id="bestK"></span></div></div>
     <div class="modes">
@@ -302,7 +305,7 @@ body.no-combo #combo{display:none}
       <li>ワイヤーは<em>5秒で切れる</em>（赤く点滅したら合図）</li>
       <li>中央下の<em>ジェット</em>で押した方向に急加速（10秒に1回）</li>
       <li>屋上に上から落ちると走って、端で自動ジャンプ</li>
-      <li>地面・ビル・橋にぶつかったら配達失敗</li>
+      <li>地面・ビル・橋にぶつかったらゲームオーバー</li>
     </ul>
     <h2>得点</h2>
     <dl>
@@ -342,16 +345,15 @@ body.no-combo #combo{display:none}
   <div class="card">
     <p class="sub">TUTORIAL</p>
     <h1 class="logo" style="font-size:40px">COMPLETE!</h1>
-    <p class="tip">これで操作はぜんぶ覚えました。本番では地面やビルにぶつかると配達失敗です。</p>
+    <p class="tip">これで操作はぜんぶ覚えました。本番では地面やビルにぶつかるとゲームオーバーです。</p>
     <div class="btns"><button class="go" id="tutGo" type="button">本番スタート</button><button class="ghost" id="tutTitle" type="button">タイトルへ</button></div>
   </div>
 </div>
 <div class="overlay" id="over" hidden>
   <div class="card result">
     <p class="why" id="why">ビルに激突</p>
-    <p class="sub">配達失敗 ・ <span id="overMode"></span>SCORE</p>
+    <p class="sub">GAME OVER ・ <span id="overMode"></span>SCORE</p>
     <p class="big"><b id="final">0</b><span> pt</span></p>
-    <p class="kanji" id="finalK"></p>
     <p class="record" id="record" hidden>NEW RECORD!</p>
     <p class="best" id="best"></p>
     <dl class="breakdown" id="breakdown"></dl>
@@ -803,8 +805,8 @@ function kanjiNum(n) {
   }
   return out;
 }
-function setScore(el, n) { el.innerHTML = '<b>' + fmtFit(n, 7) + '</b><i>' + kanjiNum(n) + '</i>'; }
-function showBests() { setScore($('bestN'), bests.normal); setScore($('bestD'), bests.dopa); setScore($('bestS'), bests.super); setScore($('bestK'), bests.kyoku); }
+function setScore(el, n) { el.innerHTML = '<b>' + fmtFit(n, 7) + '</b>'; }
+function showBests() { if (typeof showLocks === 'function') showLocks(); setScore($('bestN'), bests.normal); setScore($('bestD'), bests.dopa); setScore($('bestS'), bests.super); setScore($('bestK'), bests.kyoku); }
 const held = { L: false, R: false };
 
 function reset() {
@@ -1042,13 +1044,14 @@ function gameOver(why) {
   if (flip && flip.shown) { $('spinPts').textContent = '失敗…'; $('spin').classList.add('fail'); spinHide = 0.9; }
   flip = null; body.rotation.x = 0;
   burst(pos, 80, 12); shakeT = 0.4; flashScreen('rgba(255,40,80,.3)');
+  countPlay();
   best = bests[mode];
   const d = Math.floor(score), prevBest = best, isNew = d > prevBest && d > 0;
   if (isNew) { best = bests[mode] = d; try { localStorage.setItem(BEST_KEY[mode], String(best)); } catch (e) {} }
   $('overMode').textContent = MODE_NAME[mode] ? MODE_NAME[mode] + ' ・ ' : '';
   $('why').textContent = why;
   $('record').hidden = !isNew;
-  $('best').innerHTML = isNew ? (prevBest > 0 ? '前のベスト ' + fmtFit(prevBest, 13) + ' pt<br><small>' + kanjiNum(prevBest) + '</small>' : '初めての記録') : 'ベスト ' + fmtFit(best, 13) + ' pt<br><small>' + kanjiNum(best) + '</small><br>あと ' + fmtFit(best - d, 13) + ' pt<br><small>' + kanjiNum(best - d) + '</small>';
+  $('best').innerHTML = isNew ? (prevBest > 0 ? '前のベスト ' + fmtFit(prevBest, 13) + ' pt' : '初めての記録') : 'ベスト ' + fmtFit(best, 13) + ' pt（あと ' + fmtFit(best - d, 13) + ' pt）';
   // breakdown
   const order = ['アイテム', '橋くぐり', '橋に着地', 'すれすれ', 'Wスレスレ', '地面すれすれ', '着地', '回転ジャンプ', 'バックフリップ'];
   const rows = [['移動距離 ' + Math.floor(pathDist) + ' m', '', Math.round(stats.distPts)]];
@@ -1059,19 +1062,34 @@ function gameOver(why) {
   const st = [[stats.maxCombo, '最大コンボ'], [stats.maxSpin ? stats.maxSpin + '回転' : '-', '最多回転'], [Math.round(stats.maxSpeed * 3.6), '最高 km/h'],
               [stats.blues, '青アイテム'], [stats.golds, '金アイテム'], [stats.silvers, '銀アイテム']];
   $('stats').innerHTML = st.map(x => '<div><b>' + x[0] + '</b><small>' + x[1] + '</small></div>').join('');
-  $('final').textContent = '0'; $('finalK').textContent = '';
+  $('final').textContent = '0';
   setTimeout(() => {
     $('over').hidden = false;
     // count the score up
     const t0 = performance.now(), dur = Math.min(1400, 400 + d / 20);
     (function tick(now) { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-      const v = Math.round(d * e); $('final').textContent = fmtFit(v, 9); $('finalK').textContent = kanjiNum(v); if (k < 1 && state === 'over') requestAnimationFrame(tick); })(t0);
+      const v = Math.round(d * e); $('final').textContent = fmtFit(v, 9); if (k < 1 && state === 'over') requestAnimationFrame(tick); })(t0);
   }, 450);
 }
 $('start').addEventListener('click', () => startGame('normal'));
-$('startDopa').addEventListener('click', () => { startGame('dopa'); pop('ドパガキモード！'); });
-$('startSuper').addEventListener('click', () => { startGame('super'); pop('超ドパガキ！！'); });
-$('startKyoku').addEventListener('click', () => { startGame('kyoku'); pop('極ドパガキ！！！'); });
+// each ドパガキ mode unlocks after 10 runs of the mode before it (run counts kept in localStorage)
+const UNLOCK = { dopa: 'normal', super: 'dopa', kyoku: 'super' }, UNLOCK_RUNS = 10;
+const MODE_BTN = { dopa: ['startDopa', 'アイテム5倍'], super: ['startSuper', 'アイテム10倍'], kyoku: ['startKyoku', '金20倍・青銀10倍'] };
+let plays = { normal: 0, dopa: 0, super: 0, kyoku: 0 };
+try { Object.assign(plays, JSON.parse(localStorage.getItem('wc-plays') || '{}')); } catch (e) {}
+const unlocked = m => !UNLOCK[m] || plays[UNLOCK[m]] >= UNLOCK_RUNS;
+function countPlay() { plays[mode] = (plays[mode] || 0) + 1; try { localStorage.setItem('wc-plays', JSON.stringify(plays)); } catch (e) {} }
+function showLocks() {
+  for (const m in MODE_BTN) {
+    const [id, sub] = MODE_BTN[m], el = $(id), ok = unlocked(m), prev = UNLOCK[m];
+    el.classList.toggle('locked', !ok); el.setAttribute('aria-disabled', String(!ok));
+    el.querySelector('small').textContent = ok ? sub : '🔒 ' + (MODE_NAME[prev] || '通常') + 'をあと' + (UNLOCK_RUNS - plays[prev]) + '回';
+  }
+}
+const tryMode = (m, msg) => { if (!unlocked(m)) { retrigger($(MODE_BTN[m][0]), 'shake'); return; } startGame(m); pop(msg); };
+$('startDopa').addEventListener('click', () => tryMode('dopa', 'ドパガキモード！'));
+$('startSuper').addEventListener('click', () => tryMode('super', '超ドパガキ！！'));
+$('startKyoku').addEventListener('click', () => tryMode('kyoku', '極ドパガキ！！！'));
 $('rulesBtn').addEventListener('click', () => { $('title').hidden = true; $('rules').hidden = false; });
 $('rulesClose').addEventListener('click', () => { $('rules').hidden = true; $('title').hidden = false; });
 $('retry').addEventListener('click', () => startGame());
