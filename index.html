@@ -1131,7 +1131,7 @@ function showLocks() {
   }
 }
 // ---------- challenge & share ----------
-const GAME_URL = 'https://claude.ai/artifact/CMqPVc3TCFD7aP3C69gmTt';
+const GAME_URL = /\.github\.io$/.test(location.hostname) ? location.origin + location.pathname : 'https://kennyyossy.github.io/wire-ninja/';
 const MODE_LETTER = { normal: 'N', dopa: 'D', super: 'S', kyoku: 'K' };
 let challenge = null, chalWon = false;
 function parseCode(t) { const m = /^\s*([NDSK])\s*-?\s*(\d{1,15})\s*$/i.exec(t || ''); if (!m) return null;
