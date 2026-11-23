@@ -103,6 +103,9 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--night);color:var
 #tut.ok{border-color:var(--amber);box-shadow:0 0 28px rgba(255,181,58,.6)}
 #tut.ok h3::after{content:'  クリア！';color:var(--amber)}
 body.tutorial #feed{top:calc(env(safe-area-inset-top,0px) + 250px)}
+.tapgo{font:700 18px var(--display);color:var(--amber);letter-spacing:.1em;animation:blink 1.1s ease-in-out infinite}
+@keyframes blink{50%{opacity:.35}}
+body.no-combo #combo{display:none}
 #tutDone .list{font:500 14px/1.7 var(--body);color:var(--ink);text-align:left}
 #flash{position:fixed;inset:0;pointer-events:none;opacity:0;mix-blend-mode:screen}
 #flash.go{animation:flash .35s ease-out}
@@ -254,6 +257,15 @@ body.tutorial #feed{top:calc(env(safe-area-inset-top,0px) + 250px)}
   <p id="tutD"></p>
   <div class="bar"><u id="tutBar"></u></div>
   <div class="row"><button id="tutSkip" type="button">スキップ ▶</button><button id="tutQuit" type="button">やめる</button></div>
+</div>
+<div class="overlay" id="tutReady" hidden>
+  <div class="card">
+    <p class="sub" id="trNo">STEP 1 / 13</p>
+    <h1 class="logo" style="font-size:34px" id="trT"></h1>
+    <p class="tip" id="trD"></p>
+    <p class="tapgo">タップしてスタート</p>
+    <button class="ghost" id="trQuit" type="button">やめる</button>
+  </div>
 </div>
 <div class="overlay" id="tutDone" hidden>
   <div class="card">
@@ -416,7 +428,7 @@ function rebuildCity(px, pz) {
 const ITEM_POOL = 40, collected = new Set(), activeItems = [];
 const itemGeo = new THREE.OctahedronGeometry(2.6);
 const itemMat = { blue: new THREE.MeshBasicMaterial({ color: 0x4fa8ff }), gold: new THREE.MeshBasicMaterial({ color: 0xffd23a }) };
-const GOLD_SHARE = 0.35, SPIN_BOOST = 1.2;
+const GOLD_SHARE = 0.45, SPIN_BOOST = 1.2;
 let spinMul = 1;
 const ringGeo = new THREE.TorusGeometry(3.9, 0.18, 6, 28);
 const itemPool = [];
@@ -426,9 +438,10 @@ for (let n = 0; n < ITEM_POOL; n++) {
 }
 function itemAt(i, j) {
   const ave = ((i % 4) + 4) % 4 === 0 || ((j % 4) + 4) % 4 === 0;
-  if (!ave || rnd(i, j, 11) > 0.2 || (Math.abs(i) <= 1 && j > -2)) return null;
+  const tk = tutItemKinds();                               // tutorial: none / only the kind being taught / both
+  if (!tk || !ave || rnd(i, j, 11) > (tk === true ? 0.235 : 0.45) || (Math.abs(i) <= 1 && j > -2)) return null;
   return { key: i + ',' + j, x: i * CELL + (rnd(i, j, 12) - 0.5) * 16, z: j * CELL + (rnd(i, j, 13) - 0.5) * 16,
-           y: 26 + rnd(i, j, 14) * 36, kind: rnd(i, j, 15) < GOLD_SHARE ? 'gold' : 'blue' };
+           y: 26 + rnd(i, j, 14) * 36, kind: tk !== true ? tk : rnd(i, j, 15) < GOLD_SHARE ? 'gold' : 'blue' };
 }
 function placeItems(ci, cj) {
   activeItems.length = 0; let n = 0;
@@ -501,7 +514,7 @@ function jetEmit(n) {
   }
 }
 function fireJet(dir) {
-  if (state !== 'play' || !$('tune').hidden || jetCD > 0) return;
+  if (state !== 'play' || !$('tune').hidden || jetCD > 0 || !feat('jet')) return;
   rightV.set(-heading.z, 0, heading.x);
   if (dir === 'up') jetDir.set(0, 1, 0); else if (dir === 'down') jetDir.set(0, -1, 0);
   else jetDir.copy(rightV).multiplyScalar(dir === 'right' ? 1 : -1);
@@ -517,7 +530,7 @@ function updateJet(dt, now, paused) {
   const el = $('jet'); el.style.setProperty('--cd', String(1 - jetCD / JET_CD));
   el.classList.toggle('cool', jetCD > 0); el.classList.toggle('ready', jetCD <= 0);
   $('jetCore').textContent = jetCD > 0 ? Math.ceil(jetCD) + 's' : 'JET';
-  el.hidden = state !== 'play';
+  el.hidden = state !== 'play' || !feat('jet');
   if (jetT > 0 && !paused) {
     jetT -= dt; jetEmit(6);
     jetCone.position.copy(pos).addScaledVector(jetDir, -2.4); jetCone.position.y += 0.2;
@@ -622,7 +635,7 @@ function detach(side) {
   r.on = false; r.mesh.visible = false;
   if (!ropes.L.on && !ropes.R.on) {
     const sp = vel.length(); tutEvent('release', { sp });
-    if (vel.y >= 16 && !onRoof) flip = { t: 0, ang: 0, rate: Math.PI * 2 * Math.min(1.0, 0.4 + (vel.y - 16) * 0.03) * spinMul };
+    if (vel.y >= 16 && !onRoof && feat('spin')) flip = { t: 0, ang: 0, rate: Math.PI * 2 * Math.min(1.0, 0.4 + (vel.y - 16) * 0.03) * spinMul };
   }
 }
 
@@ -644,7 +657,7 @@ const sideOf = x => (x < window.innerWidth / 2 ? 'L' : 'R');
 const touchY = new Map();
 function reelBy(side, px) {
   const r = ropes[side];
-  if (state === 'play' && r.on && px > 0 && $('tune').hidden) r.reelReq = Math.min(30, r.reelReq + px * REEL_PER_PX);
+  if (state === 'play' && r.on && px > 0 && $('tune').hidden && feat('reel')) r.reelReq = Math.min(30, r.reelReq + px * REEL_PER_PX);
 }
 canvas.addEventListener('touchstart', e => { e.preventDefault(); for (const t of e.changedTouches) { touches.set(t.identifier, sideOf(t.clientX)); touchY.set(t.identifier, t.clientY); } refreshHeld(); }, { passive: false });
 canvas.addEventListener('touchmove', e => {
@@ -666,7 +679,8 @@ window.addEventListener('keydown', e => {
   if (e.repeat) return;
   if (e.key === 'ArrowLeft' || e.key === 'a') { keys.L = true; refreshHeld(); }
   if (e.key === 'ArrowRight' || e.key === 'd') { keys.R = true; refreshHeld(); }
-  if ((e.key === ' ' || e.key === 'Enter') && state !== 'play') startGame();
+  if ((e.key === ' ' || e.key === 'Enter') && state === 'tutready') tutBegin();
+  else if ((e.key === ' ' || e.key === 'Enter') && state !== 'play' && $('tutDone').hidden) startGame();
   const jk = { w: 'up', s: 'down', q: 'left', e: 'right' }[e.key]; if (jk) fireJet(jk);
 });
 window.addEventListener('keyup', e => {
@@ -679,7 +693,7 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 const $ = id => document.getElementById(id);
 let popT = 0;
 function bonus(pts, label, gold) {
-  if (state !== 'play') return;
+  if (state !== 'play' || !feat(BONUS_FEAT[label.replace(/^\d+/, '')] || 'x')) return;
   const rate = 1 + combo * 0.05;                         // combo bonus: +5% per current combo
   const total = Math.round(pts * rate);
   score += total;
@@ -701,7 +715,7 @@ const stats = { distPts: 0, cat: {}, maxCombo: 0, maxSpin: 0, maxSpeed: 0, golds
 function resetStats() { stats.distPts = 0; stats.cat = {}; stats.maxCombo = 0; stats.maxSpin = 0; stats.maxSpeed = 0; stats.golds = 0; stats.blues = 0; }
 let combo = 0, comboT = 0, comboMax = 10, comboTime = 3, accelMul = 1;
 function comboHit() {
-  if (state !== 'play') return;
+  if (state !== 'play' || !feat('combo')) return;
   combo = Math.min(comboMax, combo + 1); comboT = comboTime; stats.maxCombo = Math.max(stats.maxCombo, combo);
   retrigger($('combo'), 'bump');
   tutEvent('combo', { n: combo });
@@ -724,6 +738,7 @@ function showMul() {
   $('mul').textContent = parts.join(' ・ '); $('mul').hidden = !parts.length; retrigger($('mul'), 'bump');
 }
 function goldPickup() {
+  if (!feat('gold')) return;
   spinMul *= SPIN_BOOST;
   if (flip) flip.rate *= SPIN_BOOST;                      // a jump already in the air speeds up too
   const d = document.createElement('div'); d.className = 'gold'; d.textContent = '回転スピードUP ×' + spinMul.toFixed(2);
@@ -805,27 +820,55 @@ $('toTitle').addEventListener('click', () => toTitle());
 // practice mode: one lesson at a time, each clears when you do it; crashes just respawn you
 let tut = null;
 const NEAR_CATS = ['すれすれ', 'Wスレスレ', '地面すれすれ'];
+const BONUS_FEAT = { 'すれすれ': 'near', 'Wスレスレ': 'near', '地面すれすれ': 'near', 'アイテム': 'blue', '着地': 'roof', '回転ジャンプ': 'spin', 'バックフリップ': 'back' };
+// in the tutorial a mechanic (and its UI) only exists from the lesson that introduces it
+function feat(name) {
+  if (!tut) return true;
+  const k = TUT.findIndex(L => L.unlock === name);
+  return k < 0 || tut.i >= k;
+}
+function tutItemKinds() {
+  if (!tut) return true;
+  const b = feat('blue'), g = feat('gold');
+  return b && g ? (TUT[tut.i].unlock === 'gold' ? 'gold' : true) : b ? 'blue' : false;
+}
 const TUT = [
   { t: '左ワイヤー', d: '画面の<b>左半分</b>を押し続けて、左のビルにぶら下がろう（1秒）', goal: 1, tick: (s, dt) => ropes.L.on ? dt : 0 },
   { t: '右ワイヤー', d: '今度は<b>右半分</b>を押し続けて、右のビルにぶら下がろう（1秒）', goal: 1, tick: (s, dt) => ropes.R.on ? dt : 0 },
   { t: '離して飛ぶ', d: '振り子の<b>一番下を少し過ぎたところ</b>で指を離すと、前へ大きく飛べる。離して1秒空中にいよう', goal: 1,
     on: (s, e) => { if (e.type === 'release') s.armed = true; if (e.type === 'attach') s.armed = false; }, tick: (s, dt) => s.armed && !onRoof ? dt : (s.v = 0, 0) },
   { t: '左右でつなぐ', d: '左右のワイヤーを<b>交互に</b>使って、落ちずに <b>300m</b> 進もう', goal: 300, tick: (s, dt) => Math.hypot(vel.x, vel.z) * dt },
-  { t: '巻き取り', d: 'ワイヤーを刺したまま<b>指を上にスライド</b>すると巻き取れる。<b>8m</b> 巻き取ろう', goal: 8, on: (s, e) => e.type === 'reel' ? e.amt : 0 },
-  { t: 'ジェット', d: '中央下のジェットの<b>押した方向</b>に急加速する（10秒に1回）。どこかを押してみよう', goal: 1, on: (s, e) => e.type === 'jet' ? 1 : 0 },
-  { t: 'すれすれ', d: 'ビルの横（3m以内）や地面の近く（4m未満）を<b>ぶつからずに</b>通り抜けよう', goal: 1, on: (s, e) => e.type === 'bonus' && NEAR_CATS.includes(e.label) ? 1 : 0 },
-  { t: 'アイテム', d: '大通りに浮かぶ<b>青</b>（1000pt・コンボ上限アップ）か<b>金</b>（回転と加速アップ）を取ろう', goal: 1, on: (s, e) => e.type === 'item' ? 1 : 0 },
-  { t: '屋上に着地', d: 'ビルの<b>屋上に上から</b>落ちると走れる（端で自動ジャンプ）。ジェット↑で高く上がるとやりやすい', goal: 1, on: (s, e) => e.type === 'bonus' && e.label === '着地' ? 1 : 0 },
-  { t: '回転ジャンプ', d: '<b>勢いよく上に飛びながら</b>離すと回転する。1回転以上・1.5秒以上の滞空で成功', goal: 1, on: (s, e) => e.type === 'bonus' && e.label === '回転ジャンプ' ? 1 : 0 },
-  { t: 'バックフリップ', d: 'ワイヤーを刺したまま<b>巻き取りすぎて</b>、進む向きを<b>180°逆</b>にしよう（+1000pt）', goal: 1, on: (s, e) => e.type === 'bonus' && e.label === 'バックフリップ' ? 1 : 0 },
-  { t: 'コンボ', d: 'ボーナスを<b>3秒以内に続けて</b>取るとコンボがつながり、点数が上乗せされる。<b>3コンボ</b>しよう', goal: 3, on: (s, e) => e.type === 'combo' && e.n > s.v ? e.n - s.v : 0 },
+  { t: '巻き取り', unlock: 'reel', d: 'ワイヤーを刺したまま<b>指を上にスライド</b>すると巻き取れる。<b>8m</b> 巻き取ろう', goal: 8, on: (s, e) => e.type === 'reel' ? e.amt : 0 },
+  { t: 'ジェット', unlock: 'jet', d: '中央下のジェットの<b>押した方向</b>に急加速する（10秒に1回）。どこかを押してみよう', goal: 1, on: (s, e) => e.type === 'jet' ? 1 : 0 },
+  { t: 'すれすれ', unlock: 'near', d: 'ビルの横（3m以内）や地面の近く（4m未満）を<b>ぶつからずに</b>通り抜けよう', goal: 1, on: (s, e) => e.type === 'bonus' && NEAR_CATS.includes(e.label) ? 1 : 0 },
+  { t: '青アイテム', unlock: 'blue', d: '大通りに浮かぶ<b>青いアイテム</b>を取ろう。1000pt ＋ コンボ上限+5・コンボ時間+1秒', goal: 1, on: (s, e) => e.type === 'item' && e.kind === 'blue' ? 1 : 0 },
+  { t: '金アイテム', unlock: 'gold', d: '<b>金のアイテム</b>を取ろう。点数はないけど、取るたびに回転スピード×1.2・加速×1.1（そのゲーム中ずっと）', goal: 1, on: (s, e) => e.type === 'item' && e.kind === 'gold' ? 1 : 0 },
+  { t: '屋上に着地', unlock: 'roof', d: 'ビルの<b>屋上に上から</b>落ちると走れる（端で自動ジャンプ）。ジェット↑で高く上がるとやりやすい', goal: 1, on: (s, e) => e.type === 'bonus' && e.label === '着地' ? 1 : 0 },
+  { t: '回転ジャンプ', unlock: 'spin', d: '<b>勢いよく上に飛びながら</b>離すと回転する。1回転以上・1.5秒以上の滞空で成功', goal: 1, on: (s, e) => e.type === 'bonus' && e.label === '回転ジャンプ' ? 1 : 0 },
+  { t: 'バックフリップ', unlock: 'back', d: 'ワイヤーを刺したまま<b>巻き取りすぎて</b>、進む向きを<b>180°逆</b>にしよう（+1000pt）', goal: 1, on: (s, e) => e.type === 'bonus' && e.label === 'バックフリップ' ? 1 : 0 },
+  { t: 'コンボ', unlock: 'combo', d: 'ボーナスを<b>3秒以内に続けて</b>取るとコンボがつながり、点数が上乗せされる。<b>3コンボ</b>しよう', goal: 3, on: (s, e) => e.type === 'combo' && e.n > s.v ? e.n - s.v : 0 },
 ];
 function tutShow() {
   const L = TUT[tut.i];
   $('tutNo').textContent = (tut.i + 1) + '/' + TUT.length; $('tutT').textContent = L.t; $('tutD').innerHTML = L.d;
   $('tut').classList.remove('ok'); $('tutBar').style.width = '0%';
 }
-function tutSet(i) { tut.i = i; tut.s = { v: 0 }; tut.clear = 0; if (i >= TUT.length) return tutFinish(); tutShow(); }
+function tutSet(i) {
+  tut.i = i; tut.s = { v: 0 }; tut.clear = 0; if (i >= TUT.length) return tutFinish();
+  tutShow();
+  // back to the start line, frozen until the player taps
+  reset(); state = 'tutready'; $('tut').hidden = true;
+  for (const s of ['L', 'R']) { ropes[s].mark.visible = false; $('pad' + s).classList.remove('on', 'ready'); }
+  touches.clear(); held.L = held.R = false; keys.L = keys.R = false; mouseSide = null;
+  document.body.classList.toggle('no-combo', !feat('combo'));
+  const L = TUT[i];
+  $('trNo').textContent = 'STEP ' + (i + 1) + ' / ' + TUT.length; $('trT').textContent = L.t; $('trD').innerHTML = L.d;
+  $('tutReady').hidden = false;
+}
+function tutBegin() {
+  if (state !== 'tutready') return;
+  $('tutReady').hidden = true; $('tut').hidden = false; state = 'play'; pop('GO!');
+}
 function tutAdd(x) {
   if (!tut || tut.clear || !x) return;
   const L = TUT[tut.i]; tut.s.v += x;
@@ -858,14 +901,16 @@ function tutFinish() {
   burst(pos, 120, 16); flashScreen('rgba(255,210,58,.3)');
   setTimeout(() => { $('tutDone').hidden = false; }, 500);
 }
-function tutEnd() { tut = null; $('tut').hidden = true; $('tutDone').hidden = true; document.body.classList.remove('tutorial'); }
+function tutEnd() { tut = null; $('tut').hidden = true; $('tutDone').hidden = true; $('tutReady').hidden = true; document.body.classList.remove('tutorial', 'no-combo'); }
 function startTutorial() {
-  startGame(); tut = { i: 0, s: { v: 0 }, clear: 0 }; document.body.classList.add('tutorial'); $('tut').hidden = false; tutSet(0); pop('チュートリアル');
+  startGame(); tut = { i: 0, s: { v: 0 }, clear: 0 }; document.body.classList.add('tutorial'); tutSet(0);
 }
 function toTitle() { tutEnd(); $('over').hidden = true; reset(); state = 'title'; $('title').hidden = false; $('spin').hidden = true; $('feed').textContent = ''; }
 const tapBtn = (id, fn) => { const el = $(id); el.addEventListener('click', fn); for (const ev of ['touchstart', 'mousedown']) el.addEventListener(ev, e => e.stopPropagation()); };
 tapBtn('tutStart', startTutorial);
 tapBtn('tutSkip', () => { if (tut && !tut.clear) tutSet(tut.i + 1); });
+tapBtn('tutReady', tutBegin);
+tapBtn('trQuit', e => { e.stopPropagation(); toTitle(); });
 tapBtn('tutQuit', toTitle);
 tapBtn('tutGo', () => { tutEnd(); startGame(); });
 tapBtn('tutTitle', toTitle);
@@ -1058,7 +1103,7 @@ function frame(now) {
   }
   for (const s of ['L', 'R']) {
     const r = ropes[s], el = $('len' + s);
-    el.hidden = !(r.on && state === 'play');
+    el.hidden = !(r.on && state === 'play' && feat('reel'));
     if (r.on) {
       const reeling = (r.reelT || 0) > 0;
       el.querySelector('em').textContent = (reeling ? '▲ ' : '') + Math.round(r.len) + ' m';
