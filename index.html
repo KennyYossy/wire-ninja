@@ -269,7 +269,7 @@ body.no-combo #combo{display:none}
     <div class="bests"><div><small>ベスト</small><b id="bestN">0</b></div><div class="dopa"><small>ドパガキ ベスト</small><b id="bestD">0</b></div></div>
     <div class="modes">
       <button class="go" id="start" type="button">スタート</button>
-      <button class="go dopa" id="startDopa" type="button">ドパガキモード<small>アイテム4倍</small></button>
+      <button class="go dopa" id="startDopa" type="button">ドパガキモード<small>アイテム5倍</small></button>
       <div class="row2">
         <button class="ghost" id="tutStart" type="button">チュートリアル</button>
         <button class="ghost" id="rulesBtn" type="button">遊び方・得点</button>
@@ -568,20 +568,25 @@ for (let n = 0; n < ITEM_POOL; n++) {
   const g = new THREE.Group(); g.add(new THREE.Mesh(itemGeo, itemMat.blue)); g.add(new THREE.Mesh(ringGeo, itemMat.blue));
   g.visible = false; scene.add(g); itemPool.push(g);
 }
-function itemAt(i, j) {
+const ITEM_RATE = 0.235, DOPA_MUL = 5;                  // items per avenue cell; ドパガキ = x5 (may put 2 in a cell)
+function itemAt(i, j, slot) {
   const ave = ((i % 4) + 4) % 4 === 0 || ((j % 4) + 4) % 4 === 0;
   const tk = tutItemKinds();                               // tutorial: none / only the kind being taught / both
-  if (!tk || !ave || rnd(i, j, 11) > (tk === true ? (mode === 'dopa' ? 0.94 : 0.235) : 0.45) || (Math.abs(i) <= 1 && j > -2)) return null;
-  return { key: i + ',' + j, x: i * CELL + (rnd(i, j, 12) - 0.5) * 16, z: j * CELL + (rnd(i, j, 13) - 0.5) * 16,
-           y: 26 + rnd(i, j, 14) * 36, kind: tk !== true ? tk : rnd(i, j, 15) < GOLD_SHARE ? 'gold' : 'blue' };
+  const rate = tk === true ? ITEM_RATE * (mode === 'dopa' ? DOPA_MUL : 1) : 0.45;
+  const k = slot ? 20 : 0;                                 // second slot uses its own random stream
+  if (!tk || !ave || rnd(i, j, 11 + k) > rate - (slot ? 1 : 0) || (Math.abs(i) <= 1 && j > -2)) return null;
+  return { key: i + ',' + j + (slot ? 'b' : ''), x: i * CELL + (rnd(i, j, 12 + k) - 0.5) * 16, z: j * CELL + (rnd(i, j, 13 + k) - 0.5) * 16,
+           y: 26 + rnd(i, j, 14 + k) * 36, kind: tk !== true ? tk : rnd(i, j, 15 + k) < GOLD_SHARE ? 'gold' : 'blue' };
 }
 function placeItems(ci, cj) {
   activeItems.length = 0; let n = 0;
   for (let i = ci - 6; i <= ci + 6 && n < ITEM_POOL; i++) for (let j = cj - 6; j <= cj + 6 && n < ITEM_POOL; j++) {
-    const it = itemAt(i, j); if (!it || collected.has(it.key)) continue;
+    for (const slot of [0, 1]) {
+    const it = itemAt(i, j, slot); if (!it || collected.has(it.key) || n >= ITEM_POOL) continue;
     const g = itemPool[n++]; g.position.set(it.x, it.y, it.z); g.visible = true;
     g.children.forEach(m => { m.material = itemMat[it.kind]; }); g.scale.setScalar(it.kind === 'gold' ? 1.15 : 1);
     activeItems.push({ g, it });
+    }
   }
   for (; n < ITEM_POOL; n++) itemPool[n].visible = false;
 }
