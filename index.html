@@ -784,6 +784,8 @@ try { for (const m in BEST_KEY) bests[m] = +localStorage.getItem(BEST_KEY[m]) ||
 best = bests.normal;
 // score formats for the high-score displays: exponent (1.23e+6) with full kanji numerals underneath
 const fmtExp = n => n > 0 ? n.toExponential(2) : '0';
+// plain number while it fits in `max` characters, exponent form once it would not
+const fmtFit = (n, max) => { const t = Math.round(n).toLocaleString(); return t.length <= max ? t : fmtExp(n); };
 function kanjiNum(n) {
   n = Math.floor(n); if (n <= 0) return '零';
   const D = '〇一二三四五六七八九', SM = ['', '十', '百', '千'], BIG = ['', '万', '億', '兆', '京'];
@@ -799,7 +801,7 @@ function kanjiNum(n) {
   }
   return out;
 }
-function setScore(el, n) { el.innerHTML = '<b>' + fmtExp(n) + '</b><i>' + kanjiNum(n) + '</i>'; }
+function setScore(el, n) { el.innerHTML = '<b>' + fmtFit(n, 7) + '</b><i>' + kanjiNum(n) + '</i>'; }
 function showBests() { setScore($('bestN'), bests.normal); setScore($('bestD'), bests.dopa); setScore($('bestS'), bests.super); setScore($('bestK'), bests.kyoku); }
 const held = { L: false, R: false };
 
@@ -1046,14 +1048,14 @@ function gameOver(why) {
   $('overMode').textContent = MODE_NAME[mode] ? MODE_NAME[mode] + ' ・ ' : '';
   $('why').textContent = why;
   $('record').hidden = !isNew;
-  $('best').innerHTML = isNew ? (prevBest > 0 ? '前のベスト ' + fmtExp(prevBest) + ' pt<br><small>' + kanjiNum(prevBest) + '</small>' : '初めての記録') : 'ベスト ' + fmtExp(best) + ' pt<br><small>' + kanjiNum(best) + '</small><br>あと ' + fmtExp(best - d) + ' pt<br><small>' + kanjiNum(best - d) + '</small>';
+  $('best').innerHTML = isNew ? (prevBest > 0 ? '前のベスト ' + fmtFit(prevBest, 13) + ' pt<br><small>' + kanjiNum(prevBest) + '</small>' : '初めての記録') : 'ベスト ' + fmtFit(best, 13) + ' pt<br><small>' + kanjiNum(best) + '</small><br>あと ' + fmtFit(best - d, 13) + ' pt<br><small>' + kanjiNum(best - d) + '</small>';
   // breakdown
   const order = ['アイテム', '橋くぐり', '橋に着地', 'すれすれ', 'Wスレスレ', '地面すれすれ', '着地', '回転ジャンプ', 'バックフリップ'];
   const rows = [['移動距離 ' + Math.floor(pathDist) + ' m', '', Math.round(stats.distPts)]];
   for (const k of order) if (stats.cat[k]) rows.push([k, '×' + stats.cat[k].n, stats.cat[k].pts]);
   const esc = t => String(t).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]);
-  $('breakdown').innerHTML = rows.map(r => '<dt>' + esc(r[0]) + '</dt><dd class="n">' + r[1] + '</dd><dd class="v">' + r[2].toLocaleString() + '</dd>').join('')
-    + '<dt class="total">合計</dt><dd class="total"></dd><dd class="total">' + d.toLocaleString() + '</dd>';
+  $('breakdown').innerHTML = rows.map(r => '<dt>' + esc(r[0]) + '</dt><dd class="n">' + r[1] + '</dd><dd class="v">' + fmtFit(r[2], 9) + '</dd>').join('')
+    + '<dt class="total">合計</dt><dd class="total"></dd><dd class="total">' + fmtFit(d, 9) + '</dd>';
   const st = [[stats.maxCombo, '最大コンボ'], [stats.maxSpin ? stats.maxSpin + '回転' : '-', '最多回転'], [Math.round(stats.maxSpeed * 3.6), '最高 km/h'],
               [stats.blues, '青アイテム'], [stats.golds, '金アイテム'], [stats.silvers, '銀アイテム']];
   $('stats').innerHTML = st.map(x => '<div><b>' + x[0] + '</b><small>' + x[1] + '</small></div>').join('');
@@ -1063,7 +1065,7 @@ function gameOver(why) {
     // count the score up
     const t0 = performance.now(), dur = Math.min(1400, 400 + d / 20);
     (function tick(now) { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-      const v = Math.round(d * e); $('final').textContent = fmtExp(v); $('finalK').textContent = kanjiNum(v); if (k < 1 && state === 'over') requestAnimationFrame(tick); })(t0);
+      const v = Math.round(d * e); $('final').textContent = fmtFit(v, 9); $('finalK').textContent = kanjiNum(v); if (k < 1 && state === 'over') requestAnimationFrame(tick); })(t0);
   }, 450);
 }
 $('start').addEventListener('click', () => startGame('normal'));
