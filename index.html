@@ -303,7 +303,7 @@ body.no-combo #combo{display:none}
       <dt>移動</dt><dd>1m = 10pt（どの方向でも）</dd>
       <dt>青アイテム</dt><dd>1000pt ＋ コンボ上限+5・時間+1秒</dd>
       <dt>金アイテム</dt><dd>回転スピード×1.2・加速×1.1（ずっと）</dd>
-      <dt>銀アイテム</dt><dd>ジェット即回復・ジェット時間×0.95（ずっと）</dd>
+      <dt>銀アイテム</dt><dd>ジェット即回復・ジェット時間-10%（ずっと）</dd>
       <dt>すれすれ</dt><dd>ビルの横3m以内 200pt</dd>
       <dt>Wスレスレ</dt><dd>ビルの間を両側すれすれ 1000pt</dd>
       <dt>地面すれすれ</dt><dd>高さ4m未満 1500pt</dd>
@@ -572,8 +572,8 @@ function rebuildCity(px, pz) {
 const ITEM_POOL = 360, collected = new Set(), activeItems = [];
 const itemGeo = new THREE.OctahedronGeometry(2.6);
 const itemMat = { blue: new THREE.MeshBasicMaterial({ color: 0x4fa8ff }), gold: new THREE.MeshBasicMaterial({ color: 0xffd23a }), silver: new THREE.MeshBasicMaterial({ color: 0xe4ecf5 }) };
-// item mix: gold and silver equally common, blue the rest (blue/gold counts kept from before silver existed)
-const GOLD_SHARE = 0.31, SILVER_SHARE = 0.31, SPIN_BOOST = 1.2;
+// item mix: silver is half as common as gold, blue the rest (blue/gold counts kept from before silver existed)
+const GOLD_SHARE = 0.367, SILVER_SHARE = 0.183, SPIN_BOOST = 1.2;
 let spinMul = 1;
 const ringGeo = new THREE.TorusGeometry(3.9, 0.18, 6, 28);
 const itemPool = [];
@@ -582,7 +582,7 @@ for (let n = 0; n < ITEM_POOL; n++) {
   g.visible = false; scene.add(g); itemPool.push(g);
 }
 const itemKind = u => u < GOLD_SHARE ? 'gold' : u < GOLD_SHARE + SILVER_SHARE ? 'silver' : 'blue';
-const ITEM_RATE = 0.375, MODE_MUL = { normal: 1, dopa: 5, super: 10 };                    // 0.2585 before silver was added on top                  // items per avenue cell; ドパガキ = x5 (may put 2 in a cell)
+const ITEM_RATE = 0.316, MODE_MUL = { normal: 1, dopa: 5, super: 10 };                    // 0.2585 before silver was added on top                  // items per avenue cell; ドパガキ = x5 (may put 2 in a cell)
 function itemAt(i, j, slot) {
   const ave = ((i % 4) + 4) % 4 === 0 || ((j % 4) + 4) % 4 === 0;
   const tk = tutItemKinds();                               // tutorial: none / only the kind being taught / both
@@ -928,7 +928,7 @@ function goldPickup() {
 // silver: jet refills at once and its cooldown gets x0.95 shorter for the rest of the run
 function silverPickup() {
   if (!feat('silver')) return;
-  jetMul *= 0.95; jetCD = 0;
+  jetMul *= 0.9; jetCD = 0;
   const d = document.createElement('div'); d.className = 'silver'; d.textContent = 'ジェット即回復！';
   const d2 = document.createElement('div'); d2.className = 'jetup'; d2.textContent = 'ジェット時間 ×' + jetMul.toFixed(2) + '（' + (JET_CD * jetMul).toFixed(1) + '秒）';
   $('feed').appendChild(d); $('feed').appendChild(d2); setTimeout(() => d.remove(), 1400); setTimeout(() => d2.remove(), 1600);
@@ -1041,7 +1041,7 @@ const TUT = [
   { t: 'すれすれ', unlock: 'near', d: 'ビルの横（3m以内）や地面の近く（4m未満）を<b>ぶつからずに</b>通り抜けよう', goal: 1, on: (s, e) => e.type === 'bonus' && NEAR_CATS.includes(e.label) ? 1 : 0 },
   { t: '青アイテム', unlock: 'blue', d: '大通りに浮かぶ<b>青いアイテム</b>を取ろう。1000pt ＋ コンボ上限+5・コンボ時間+1秒', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'blue' ? 1 : 0 },
   { t: '金アイテム', unlock: 'gold', d: '<b>金のアイテム</b>を取ろう。点数はないけど、取るたびに回転スピード×1.2・加速×1.1（そのゲーム中ずっと）', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'gold' ? 1 : 0 },
-  { t: '銀アイテム', unlock: 'silver', d: '<b>銀のアイテム</b>を取ろう。取ると<b>ジェットが即回復</b>して、ジェットの待ち時間も×0.95に短くなる（そのゲーム中ずっと）', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'silver' ? 1 : 0 },
+  { t: '銀アイテム', unlock: 'silver', d: '<b>銀のアイテム</b>を取ろう。取ると<b>ジェットが即回復</b>して、ジェットの待ち時間も10%短くなる（そのゲーム中ずっと）', goal: 2, count: true, on: (s, e) => e.type === 'item' && e.kind === 'silver' ? 1 : 0 },
   { t: '橋くぐり', unlock: 'bridge', d: 'ビルの間にかかった<b>橋の下</b>をくぐろう。<b>低い橋ほど高得点</b>（水色500 → ピンク → 金2000pt）。橋にぶつかると失敗', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '橋くぐり' ? 1 : 0 },
   { t: '屋上に着地', unlock: 'roof', d: 'ビルの<b>屋上に上から</b>落ちると走れる（端で自動ジャンプ）。ジェット↑で高く上がるとやりやすい', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '着地' ? 1 : 0 },
   { t: '回転ジャンプ', unlock: 'spin', d: '<b>勢いよく上に飛びながら</b>離すと回転する。1回転以上・1.5秒以上の滞空で成功', goal: 2, count: true, on: (s, e) => e.type === 'bonus' && e.label === '回転ジャンプ' ? 1 : 0 },
