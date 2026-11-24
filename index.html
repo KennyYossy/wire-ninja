@@ -270,7 +270,7 @@ body.no-combo #combo{display:none}
 <div class="hud">
   <div class="stat"><b id="score">0</b><small>pt · <span id="dist">0</span> m</small><em id="mul" hidden></em><em id="target" hidden></em>
     <div id="combo" class="off"><span class="lbl">COMBO</span><b id="comboN">0</b><span id="comboMax">/ 10</span><i><u id="comboBar"></u></i></div></div>
-  <div class="stat r"><b id="spd">0</b><small>km/h</small><br><button id="gear" type="button" data-en="TUNE">調整</button></div>
+  <div class="stat r"><b id="spd">0</b><small>km/h</small></div>
 </div>
 <div class="pads"><div class="pad L" id="padL">L</div><div class="pad R" id="padR">R</div>
   <span class="len L" id="lenL" hidden><em></em><i><u></u></i><small data-en="REEL">巻き取り</small></span><span class="len R" id="lenR" hidden><em></em><i><u></u></i><small data-en="REEL">巻き取り</small></span></div>
@@ -400,9 +400,9 @@ body.no-combo #combo{display:none}
 (() => {
 'use strict';
 // ---------- tunables ----------
-const DEFAULTS = { G: 32, PUMP: 5, RANGE: 90, MINSPD: 16, SIDE: 0.2, TURN: 18 };
+const DEFAULTS = { G: 32, PUMP: 5, RANGE: 90, MINSPD: 10, SIDE: 0.2, TURN: 18 };
 const P = Object.assign({}, DEFAULTS);
-try { Object.assign(P, JSON.parse(localStorage.getItem('wc-tune') || '{}')); } catch (e) {}
+try { localStorage.removeItem('wc-tune'); } catch (e) {}   // tuning is fixed for now (panel hidden)
 const nrm = new THREE.Vector3(), tang = new THREE.Vector3(), REEL_SPEED = 14, REEL_PER_PX = 0.05, RUN_SPEED = 20, JUMP_V = 15, FOOT = 0.9;
 const W_NEAR = 9, W_WINDOW = 0.7;
 let wCD = 0, wL = -9, wR = -9, groundArmed = true;
@@ -1319,7 +1319,6 @@ for (const [k, i, o] of tune) $(i).addEventListener('input', () => {
 });
 $('tReset').addEventListener('click', () => { Object.assign(P, DEFAULTS); syncTune(); try { localStorage.removeItem('wc-tune'); } catch (e) {} });
 function setTune(open) { $('tune').hidden = !open; $('paused').hidden = !open; }
-$('gear').addEventListener('click', () => setTune($('tune').hidden));
 $('tClose').addEventListener('click', () => setTune(false));
 syncTune(); applyLang();
 $('langBtn').addEventListener('click', () => { lang = lang === 'en' ? 'ja' : 'en'; try { localStorage.setItem('wc-lang', lang); } catch (e) {} applyLang(); });
