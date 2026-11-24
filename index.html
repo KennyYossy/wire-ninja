@@ -457,10 +457,12 @@ const camera = new THREE.PerspectiveCamera(72, 1, 0.3, 400);
 const hemi = new THREE.HemisphereLight(0x6a5cff, 0x1a0820, 0.9); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xff8fd0, 0.5); sun.position.set(-1, 2, 1); scene.add(sun);
 
+// narrower view on phones (was 80°, which felt too wide-angle in portrait)
+const BASE_FOV_PORTRAIT = 68;
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h, false); camera.aspect = w / h;
-  camera.fov = w < h ? 80 : 68; camera.updateProjectionMatrix();
+  camera.fov = w < h ? BASE_FOV_PORTRAIT : 62; camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resize); resize();
 
@@ -1560,8 +1562,8 @@ $('rulesClose').addEventListener('click', () => { $('rules').hidden = true; $('t
 const VERSION = '1.2';
 const CHANGELOG = [
   { v: '1.2', date: '2026-11-25',
-    ja: ['新ステージ「夕暮れの港」を追加（どのモードでも合計10回遊ぶと解放、タイトルのメニュー上で選べる）', '港の建物は低め（高いビルなし）で、屋根つき倉庫・丸いタンク・L字ビル・段々ビル・コンテナなど形いろいろ', 'ゆっくり回るクレーン：先端にワイヤーを刺すと、刺したまま一緒に動く', '低く進む船：緑の甲板に着地すると休める（+500pt）。船は動き続けるので飛び立ちに注意', 'ベスト記録はステージごとに保存。港の挑戦コードは H から始まる（例 HN-12345）'],
-    en: ['New stage: SUNSET HARBOR (unlocks after 10 runs in any mode; pick it at the top of the title menu)', 'Harbor buildings are low (no towers) and come in many shapes: gabled warehouses, round tanks, L-shaped and stepped buildings, container stacks', 'Slowly turning cranes: hook the tip and it carries your wire along', 'Low ships: land on the green deck to rest (+500pt). The ship keeps moving, so time your take-off', 'Best scores are kept per stage. Harbor challenge codes start with H (e.g. HN-12345)'] },
+    ja: ['新ステージ「夕暮れの港」を追加（どのモードでも合計10回遊ぶと解放、タイトルのメニュー上で選べる）', '港の建物は低め（高いビルなし）で、屋根つき倉庫・丸いタンク・L字ビル・段々ビル・コンテナなど形いろいろ', 'ゆっくり回るクレーン：先端にワイヤーを刺すと、刺したまま一緒に動く', '低く進む船：緑の甲板に着地すると休める（+500pt）。船は動き続けるので飛び立ちに注意', 'スマホ縦画面の視野を少し狭くした（横に広がりすぎて見えないように）', 'ベスト記録はステージごとに保存。港の挑戦コードは H から始まる（例 HN-12345）'],
+    en: ['New stage: SUNSET HARBOR (unlocks after 10 runs in any mode; pick it at the top of the title menu)', 'Harbor buildings are low (no towers) and come in many shapes: gabled warehouses, round tanks, L-shaped and stepped buildings, container stacks', 'Slowly turning cranes: hook the tip and it carries your wire along', 'Low ships: land on the green deck to rest (+500pt). The ship keeps moving, so time your take-off', 'Slightly narrower view on phones in portrait (less wide-angle)', 'Best scores are kept per stage. Harbor challenge codes start with H (e.g. HN-12345)'] },
   { v: '1.1', date: '2026-11-24',
     ja: ['極ドパガキで得点が高すぎると「∞」になる不具合を修正', '10^300を超える得点も出せるように（巨大な数は 1.23×10⁴⁵⁶ や 10^(2.37×10²³) の形で表示）', '回転ジャンプの回転数の上限をなくした', '巨大な得点でもベスト記録・シェア・挑戦コードが使えるように', 'メニューにバージョンとアップデート履歴を追加'],
     en: ['Fixed scores turning into "∞" in MAX DOPA', 'Scores can now go beyond 10^300 (huge numbers show as 1.23×10⁴⁵⁶ or 10^(2.37×10²³))', 'No more limit on spin-jump rotations', 'Best scores, sharing and challenge codes work with huge scores', 'Version and update history added to the menu'] },
@@ -1963,8 +1965,8 @@ function frame(now) {
   updateSparks(dt);
   if (spinHide > 0) { spinHide -= dt; if (spinHide <= 0) $('spin').hidden = true; }
   const sp = vel.length();
-  const baseFov = window.innerWidth < window.innerHeight ? 80 : 68;
-  camera.fov += ((baseFov + Math.min(18, sp * 0.25)) - camera.fov) * k; camera.updateProjectionMatrix();
+  const baseFov = window.innerWidth < window.innerHeight ? BASE_FOV_PORTRAIT : 62;
+  camera.fov += ((baseFov + Math.min(10, sp * 0.15)) - camera.fov) * k; camera.updateProjectionMatrix();
 
   // HUD
   if (state === 'play') {
