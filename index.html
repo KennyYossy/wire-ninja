@@ -537,7 +537,7 @@ function setWorld(w) {
   ground.material.color.setHex(L.ground); towerMat.emissiveIntensity = L.win;
   grid.visible = !hb; harborGrid.visible = hb; skyDome.visible = sunDisc.visible = sunGlow.visible = hb;
   cellCache.clear(); bridgeCache.clear(); craneCache.clear(); shipMap.clear(); ships.length = 0; craneList.length = 0; builtCell = null;
-  for (const m of [craneParts, craneLamp, shipParts, shipTop, boxes]) m.count = 0;
+  for (const m of [craneParts, craneLamp, shipParts, shipTop, boxes, tanks]) m.count = 0;
   bests = bestsBy[w];
 }
 
@@ -581,24 +581,60 @@ function cityCell(i, j) {
   }
   return b;
 }
-// harbor: warehouses, a few tall harbor buildings, low container stacks and open water; the avenues are water too
+// harbor: low buildings only (no towers), in several shapes built from boxes and cylinders:
+// gabled warehouses, oil tanks, L-shaped offices, stepped buildings and container stacks. The avenues are water.
+// A cell returns its main part with every part (main included) in .parts; each part is its own solid / landable roof.
 const HB_WALL = [0x9a4a3a, 0x2f6f73, 0xc89a6a, 0x56607a, 0xb0582f, 0x7a5a8a], HB_BOX = [0xd8452e, 0x2f6fd0, 0x2fa85a, 0xf2b230, 0xe07a2a, 0x8a3fb0];
+const HB_TANK = [0xe8e0d0, 0xd8d0c0, 0xc0c8c8, 0xe0b080];
+const NO_PARTS = [], partsOf = b => !b ? NO_PARTS : b.parts || [b];
+function hPart(x, z, w, d, h, kind, col, extra) {
+  return Object.assign({ x, z, w, d, h, kind, col, minx: x - w / 2, maxx: x + w / 2, minz: z - d / 2, maxz: z + d / 2 }, extra);
+}
 function harborCell(i, j) {
   if (mod4(i) === 0 || mod4(j) === 0) return null;
-  const cx = i * CELL, cz = j * CELL, d = Math.min(1, Math.hypot(cx, cz) / 2600);
-  const start = j <= 2 && j >= -12 && Math.abs(i) === 1;          // same tall walls along the first avenue as the city
-  if (!start && rnd(i, j, 101) > 0.94 - 0.2 * d) return null;      // open water, more of it far out
-  const nearAve = mod4(i) !== 2 || mod4(j) !== 2, kr = rnd(i, j, 102), shrink = 1 - 0.25 * d;
-  let w, dp, h, kind = 'bldg';
-  if (start) { w = 26; dp = 30; h = 64 + rnd(i, j, 4) * 30; }
-  else if (kr < 0.16) { kind = 'box'; w = 14 + rnd(i, j, 103) * 8; dp = 20 + rnd(i, j, 104) * 8; h = 2.6 * (3 + Math.floor(rnd(i, j, 105) * 4)); }   // container stack
-  else if (kr < 0.52) { w = (16 + rnd(i, j, 103) * 6) * shrink; dp = (16 + rnd(i, j, 104) * 6) * shrink; h = 44 + rnd(i, j, 105) * 40 * (1 - 0.3 * d); }
-  else { w = (26 + rnd(i, j, 103) * 5) * shrink; dp = (24 + rnd(i, j, 104) * 6) * shrink; h = 22 + rnd(i, j, 105) * 18 + (nearAve ? 10 : 0); }   // warehouse
-  if (!start && kind === 'bldg' && rnd(i, j, 106) < 0.06) h += 50 + rnd(i, j, 107) * 40;
-  const mx = Math.max(0, (CELL - w) / 2 - 2.5), mz = Math.max(0, (CELL - dp) / 2 - 2.5);
-  const x = cx + (start ? 0 : (rnd(i, j, 6) * 2 - 1) * mx), z = cz + (start ? 0 : (rnd(i, j, 7) * 2 - 1) * mz);
-  const pal = kind === 'box' ? HB_BOX : HB_WALL;
-  return { x, z, w, d: dp, h, kind, col: pal[(rnd(i, j, 108) * pal.length) | 0], minx: x - w / 2, maxx: x + w / 2, minz: z - dp / 2, maxz: z + dp / 2 };
+  const cx = i * CELL, cz = j * CELL, dd = Math.min(1, Math.hypot(cx, cz) / 2600);
+  const R = (k) => rnd(i, j, k), pick = (pal, k) => pal[(R(k) * pal.length) | 0];
+  const start = j <= 2 && j >= -12 && Math.abs(i) === 1;          // walls along the first avenue (a little higher than the rest)
+  let parts;
+  if (start) parts = [hPart(cx + Math.sign(i) * 4, cz, 14, 24, 40 + R(4) * 6, 'bldg', pick(HB_WALL, 108))];
+  else {
+    if (R(101) > 0.99 - 0.15 * dd) return null;                    // open water, more of it far out
+    const kr = R(102), alongX = R(109) < 0.5, ox = (R(6) * 2 - 1) * 3, oz = (R(7) * 2 - 1) * 3, x0 = cx + ox, z0 = cz + oz;
+    const col = pick(HB_WALL, 108);
+    if (kr < 0.28) {                                              // warehouse with a gabled (stepped) roof
+      const w = 12 + R(103) * 3, len = 22 + R(104) * 6, h = 14 + R(105) * 8;
+      const W = alongX ? len : w, D = alongX ? w : len;
+      C.setHex(col).multiplyScalar(0.62); const roof = C.getHex();
+      parts = [hPart(x0, z0, W, D, h, 'shed', col),
+               hPart(x0, z0, alongX ? W - 1 : w * 0.45, alongX ? w * 0.45 : D - 1, h + 2.5 + R(106), 'shed', roof)];
+    } else if (kr < 0.46) {                                       // two or three round oil tanks
+      const n = R(103) < 0.5 ? 2 : 3, D = 9 + R(104) * 2.5, gap = D + 1.2, c0x = n === 3 ? cx : x0, c0z = n === 3 ? cz : z0;
+      parts = [];
+      for (let k = 0; k < n; k++) {
+        const t = (k - (n - 1) / 2) * gap, x = alongX ? c0x + t : c0x, z = alongX ? c0z : c0z + t, h = 18 + R(110 + k) * 12, side = D * 0.85;
+        parts.push(hPart(x, z, side, side, h, 'tank', pick(HB_TANK, 120 + k), { dia: D }));
+      }
+    } else if (kr < 0.62) {                                       // L-shaped office
+      const a = 10 + R(103) * 3, b = 20 + R(104) * 6, hA = 24 + R(105) * 12, wB = 10 + R(106) * 2, hB = 14 + R(107) * 8;
+      const sx = R(111) < 0.5 ? -1 : 1, sz = R(112) < 0.5 ? -1 : 1;
+      const ax = alongX ? x0 : x0 - sx * wB / 2, az = alongX ? z0 - sz * wB / 2 : z0;   // centre the whole L in the lot
+      const A = alongX ? hPart(ax, az, b, a, hA, 'bldg', col) : hPart(ax, az, a, b, hA, 'bldg', col);
+      const Bx = alongX ? ax + sx * (b / 2 - wB / 2) : ax + sx * (a / 2 + wB / 2), Bz = alongX ? az + sz * (a / 2 + wB / 2) : az + sz * (b / 2 - wB / 2);
+      parts = [A, hPart(Bx, Bz, wB, wB, hB, 'bldg', pick(HB_WALL, 113))];
+    } else if (kr < 0.78) {                                       // stepped building: wide low base + narrower upper block
+      const bw = 18 + R(103) * 4, bh = 14 + R(104) * 4, tw = 10 + R(105) * 3, th = 28 + R(106) * 12;
+      parts = [hPart(x0, z0, bw, bw, bh, 'bldg', col), hPart(x0 + (R(111) - 0.5) * (bw - tw) * 0.6, z0 + (R(112) - 0.5) * (bw - tw) * 0.6, tw, tw, th, 'bldg', pick(HB_WALL, 113))];
+    } else if (kr < 0.92) {                                       // container yard: rows of stacks of different heights
+      const n = 2 + ((R(103) * 3) | 0); parts = [];
+      for (let k = 0; k < n; k++) {
+        const t = (k - (n - 1) / 2) * 6.6, x = alongX ? x0 : x0 + t, z = alongX ? z0 + t : z0;
+        parts.push(hPart(x, z, alongX ? 12.5 : 5.6, alongX ? 5.6 : 12.5, 2.6 * (2 + ((R(110 + k) * 4) | 0)), 'box', pick(HB_BOX, 120 + k)));
+      }
+    } else return null;
+  }
+  // keep the main (tallest) part first: items sit on its roof
+  parts.sort((p, q) => q.h - p.h);
+  const main = parts[0]; main.parts = parts; return main;
 }
 
 // ---------- harbor cranes ----------
@@ -606,13 +642,15 @@ function harborCell(i, j) {
 // and the wire hooks onto the jib tip, which keeps moving while you hang from it
 const craneCache = new Map(), craneList = [], MAX_CR = 70;
 function crane(i, j) {
-  if (world !== 'harbor' || mod4(i) !== 0 || mod4(j) === 0) return null;
+  if (world !== 'harbor' || mod4(j) === 0) return null;
   const key = i + ',' + j;
   if (craneCache.has(key)) return craneCache.get(key);
+  // on the avenues along z, and on empty lots of open water (quay cranes)
+  const spot = mod4(i) === 0 ? rnd(i, j, 110) < 0.92 && !(i === 0 && j > -14) : !cell(i, j) && Math.abs(i) > 1 && rnd(i, j, 118) < 0.9;
   let c = null;
-  if (rnd(i, j, 110) < 0.68 && !(i === 0 && j > -14)) {
-    const x = i * CELL + (rnd(i, j, 111) - 0.5) * 8, z = j * CELL + (rnd(i, j, 112) - 0.5) * 14, H = 58 + rnd(i, j, 113) * 22;
-    c = { key, x, z, H, arm: 20 + rnd(i, j, 114) * 6, ph: rnd(i, j, 115) * Math.PI * 2, w: (0.12 + rnd(i, j, 116) * 0.14) * (rnd(i, j, 117) < 0.5 ? -1 : 1),
+  if (spot) {
+    const x = i * CELL + (rnd(i, j, 111) - 0.5) * 8, z = j * CELL + (rnd(i, j, 112) - 0.5) * 14, H = 50 + rnd(i, j, 113) * 14;   // the cranes are the tallest things in the harbor
+    c = { key, x, z, H, arm: 18 + rnd(i, j, 114) * 6, ph: rnd(i, j, 115) * Math.PI * 2, w: (0.12 + rnd(i, j, 116) * 0.14) * (rnd(i, j, 117) < 0.5 ? -1 : 1),
           minx: x - 1.4, maxx: x + 1.4, minz: z - 1.4, maxz: z + 1.4, h: H + 2.4, isCrane: true };
   }
   craneCache.set(key, c);
@@ -666,7 +704,8 @@ const boxTex = (() => {
   const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; return t;
 })();
 const boxes = new THREE.InstancedMesh(unitBox, new THREE.MeshLambertMaterial({ color: 0xffffff, map: boxTex }), MAX_B);
-[craneParts, craneLamp, shipParts, shipTop, boxes].forEach(m => { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); if (m !== craneLamp && m !== shipTop) m.setColorAt(0, new THREE.Color(0xffffff)); m.frustumCulled = false; m.count = 0; scene.add(m); });
+const tanks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.5, 0.5, 1, 16), new THREE.MeshLambertMaterial({ color: 0xffffff }), MAX_B);
+[craneParts, craneLamp, shipParts, shipTop, boxes, tanks].forEach(m => { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); if (m !== craneLamp && m !== shipTop) m.setColorAt(0, new THREE.Color(0xffffff)); m.frustumCulled = false; m.count = 0; scene.add(m); });
 const RQ = new THREE.Quaternion(), YAXIS = new THREE.Vector3(0, 1, 0), cT = new THREE.Vector3();
 function drawMovers() {
   if (world !== 'harbor') return;
@@ -765,13 +804,18 @@ function rebuildCity(px, pz) {
   const ci = Math.round(px / CELL), cj = Math.round(pz / CELL);
   const key = ci + ',' + cj;
   if (key === builtCell) return; builtCell = key;
-  let n = 0, r = 0, nb0 = 0;
+  let n = 0, r = 0, nb0 = 0, nt = 0;
   const hb = world === 'harbor'; craneList.length = 0;
   for (let i = ci - VIEW_CELLS; i <= ci + VIEW_CELLS; i++) for (let j = cj - VIEW_CELLS; j <= cj + VIEW_CELLS; j++) {
     if (hb) { const c = crane(i, j); if (c && craneList.length < MAX_CR) craneList.push(c); }
-    const b = cell(i, j); if (!b || n >= MAX_B) continue;
-    if (b.kind === 'box') {                                   // harbor container stack
+    const b0 = cell(i, j); if (!b0) continue;
+    for (const b of partsOf(b0)) {
+    if (n >= MAX_B || nb0 >= MAX_B || nt >= MAX_B) break;
+    if (b.kind === 'box' || b.kind === 'shed') {              // harbor: containers and warehouses (corrugated, no windows)
       M.compose(T.set(b.x, b.h / 2, b.z), Q.identity(), S.set(b.w, b.h, b.d)); boxes.setMatrixAt(nb0, M); C.setHex(b.col); boxes.setColorAt(nb0++, C); continue;
+    }
+    if (b.kind === 'tank') {                                  // harbor: round oil tank (its solid box sits inside the circle)
+      M.compose(T.set(b.x, b.h / 2, b.z), Q.identity(), S.set(b.dia, b.h, b.dia)); tanks.setMatrixAt(nt, M); C.setHex(b.col); tanks.setColorAt(nt++, C); continue;
     }
     M.compose(T.set(b.x, b.h / 2, b.z), Q.identity(), S.set(b.w, b.h, b.d)); towers.setMatrixAt(n, M);
     if (hb) C.setHex(b.col); else C.setRGB(b.tint * 0.55, b.tint * 0.5, b.tint); towers.setColorAt(n, C);
@@ -782,9 +826,10 @@ function rebuildCity(px, pz) {
       M.compose(T.set(b.maxx, b.h / 2, b.maxz), Q, S.set(0.5, b.h, 0.5)); ribs.setMatrixAt(r, M); ribs.setColorAt(r++, C);
     }
     n++;
+    }
   }
-  towers.count = n; caps.count = n; ribs.count = r; boxes.count = nb0;
-  [towers, caps, ribs, boxes].forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
+  towers.count = n; caps.count = n; ribs.count = r; boxes.count = nb0; tanks.count = nt;
+  [towers, caps, ribs, boxes, tanks].forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
   let nb = 0, ng = 0;
   for (let i = ci - VIEW_CELLS; i <= ci + VIEW_CELLS && nb < MAX_BR; i++) for (let j = cj - VIEW_CELLS; j <= cj + VIEW_CELLS && nb < MAX_BR; j++) {
     const br = bridge(i, j); if (!br) continue;
@@ -856,7 +901,7 @@ function itemAt(i, j, slot) {
   const k = slot * 20;                                     // each extra slot in a cell uses its own random stream
   if (!tk || !ave || rnd(i, j, 11 + k) > rate - slot || (Math.abs(i) <= 1 && j > -2)) return null;
   return { key: i + ',' + j + (slot ? '#' + slot : ''), x: i * CELL + (rnd(i, j, 12 + k) - 0.5) * 16, z: j * CELL + (rnd(i, j, 13 + k) - 0.5) * 16,
-           y: 26 + rnd(i, j, 14 + k) * 36, kind: tk !== true ? tk : modeKind(rnd(i, j, 15 + k)) };
+           y: (world === 'harbor' ? 16 + rnd(i, j, 14 + k) * 28 : 26 + rnd(i, j, 14 + k) * 36), kind: tk !== true ? tk : modeKind(rnd(i, j, 15 + k)) };
 }
 // 30% of rooftops carry an item too (same colour mix)
 function roofItemAt(i, j) {
@@ -1090,7 +1135,7 @@ function showBests() { if (typeof showStages === 'function') showStages(); if (t
 const held = { L: false, R: false };
 
 function reset() {
-  pos.set(0, 50, 8); vel.set(0, 7, -24); heading.set(0, 0, -1); camHead.copy(heading);
+  pos.set(0, world === 'harbor' ? 38 : 50, 8); vel.set(0, 7, -24);   // the harbor is lower, so start lower heading.set(0, 0, -1); camHead.copy(heading);
   maxDist = 0; time = 0; wT = 0; lastShip = null; wL = wR = -9; wCD = 0; groundArmed = true; uHist.length = 0; uT = uSample = uCD = 0; pendingNear.length = 0; onRoof = null; flip = null; score = 0; pathDist = 0; nearCD = 0; lastNear = null;
   body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0; jetCD = 0; jetT = 0; spinMul = 1; spinLg = 0; accelLg = 0; $('mul').hidden = true; combo = 0; comboT = 0; comboMax = 10; comboTime = 3; accelMul = 1; jetMul = 1; jetMax = JET_CD; resetStats();
   for (const s of ['L', 'R']) { ropes[s].reelT = 0; ropes[s].snapped = false; ropes[s].t = 0; }
@@ -1107,17 +1152,18 @@ function findAnchor(side) {
   const px = pos.x + heading.x * AIM_FWD + rightV.x * sgn * 6, pz = pos.z + heading.z * AIM_FWD + rightV.z * sgn * 6;
   const ci = Math.round(pos.x / CELL), cj = Math.round(pos.z / CELL), rad = Math.ceil(P.RANGE / CELL) + 1;
   let bestS = Infinity, bestA = null;
+  const hbA = world === 'harbor', aimD = hbA ? 38 : 50;      // the harbor is lower, so it prefers a shorter wire
   for (let i = ci - rad; i <= ci + rad; i++) for (let j = cj - rad; j <= cj + rad; j++) {
     const c = crane(i, j);
     if (c) {                                                  // harbor: the tip of a crane's jib (slightly preferred)
       craneTip(c, cT); const rx = cT.x - pos.x, ry = cT.y - pos.y, rz = cT.z - pos.z, dist = Math.hypot(rx, ry, rz);
       const fwd = rx * heading.x + rz * heading.z, lat = (rx * rightV.x + rz * rightV.z) * sgn;
       if (ry >= 3 && dist >= 9 && dist <= P.RANGE && fwd >= 2 && lat >= 5 + fwd * 0.2) {
-        const score = Math.abs(dist - 50) - fwd * 0.4 + lat * 0.3 - 6;
+        const score = Math.abs(dist - aimD) - fwd * 0.4 + lat * 0.3 - 6 + (cT.y - dist < 4 ? 20 : 0);
         if (score < bestS) { bestS = score; bestA = cT.clone(); bestA.crane = c; }
       }
     }
-    const b = cell(i, j); if (!b) continue;
+    for (const b of partsOf(cell(i, j))) {
     const ay = Math.min(b.h - 0.5, pos.y + AIM_UP);
     if (ay < pos.y + 3) continue;
     // nearest point on footprint boundary to the aim point
@@ -1133,8 +1179,9 @@ function findAnchor(side) {
     if (dist < 9 || dist > P.RANGE) continue;
     const fwd = rx * heading.x + rz * heading.z, lat = (rx * rightV.x + rz * rightV.z) * sgn;
     if (fwd < 2 || lat < 5 + fwd * 0.2) continue;
-    const score = Math.abs(dist - 50) - fwd * 0.4 + lat * 0.3;
+    const score = Math.abs(dist - aimD) - fwd * 0.4 + lat * 0.3 + (hbA && ay - dist < 4 ? 20 : 0);   // harbor: avoid swings that would dip into the sea
     if (score < bestS) { bestS = score; bestA = tmp.set(ax, ay, az).clone(); }
+    }
   }
   return bestA;
 }
@@ -1513,8 +1560,8 @@ $('rulesClose').addEventListener('click', () => { $('rules').hidden = true; $('t
 const VERSION = '1.2';
 const CHANGELOG = [
   { v: '1.2', date: '2026-11-25',
-    ja: ['新ステージ「夕暮れの港」を追加（どのモードでも合計10回遊ぶと解放、タイトルのメニュー上で選べる）', 'ゆっくり回るクレーン：先端にワイヤーを刺すと、刺したまま一緒に動く', '低く進む船：緑の甲板に着地すると休める（+500pt）。船は動き続けるので飛び立ちに注意', 'ベスト記録はステージごとに保存。港の挑戦コードは H から始まる（例 HN-12345）'],
-    en: ['New stage: SUNSET HARBOR (unlocks after 10 runs in any mode; pick it at the top of the title menu)', 'Slowly turning cranes: hook the tip and it carries your wire along', 'Low ships: land on the green deck to rest (+500pt). The ship keeps moving, so time your take-off', 'Best scores are kept per stage. Harbor challenge codes start with H (e.g. HN-12345)'] },
+    ja: ['新ステージ「夕暮れの港」を追加（どのモードでも合計10回遊ぶと解放、タイトルのメニュー上で選べる）', '港の建物は低め（高いビルなし）で、屋根つき倉庫・丸いタンク・L字ビル・段々ビル・コンテナなど形いろいろ', 'ゆっくり回るクレーン：先端にワイヤーを刺すと、刺したまま一緒に動く', '低く進む船：緑の甲板に着地すると休める（+500pt）。船は動き続けるので飛び立ちに注意', 'ベスト記録はステージごとに保存。港の挑戦コードは H から始まる（例 HN-12345）'],
+    en: ['New stage: SUNSET HARBOR (unlocks after 10 runs in any mode; pick it at the top of the title menu)', 'Harbor buildings are low (no towers) and come in many shapes: gabled warehouses, round tanks, L-shaped and stepped buildings, container stacks', 'Slowly turning cranes: hook the tip and it carries your wire along', 'Low ships: land on the green deck to rest (+500pt). The ship keeps moving, so time your take-off', 'Best scores are kept per stage. Harbor challenge codes start with H (e.g. HN-12345)'] },
   { v: '1.1', date: '2026-11-24',
     ja: ['極ドパガキで得点が高すぎると「∞」になる不具合を修正', '10^300を超える得点も出せるように（巨大な数は 1.23×10⁴⁵⁶ や 10^(2.37×10²³) の形で表示）', '回転ジャンプの回転数の上限をなくした', '巨大な得点でもベスト記録・シェア・挑戦コードが使えるように', 'メニューにバージョンとアップデート履歴を追加'],
     en: ['Fixed scores turning into "∞" in MAX DOPA', 'Scores can now go beyond 10^300 (huge numbers show as 1.23×10⁴⁵⁶ or 10^(2.37×10²³))', 'No more limit on spin-jump rotations', 'Best scores, sharing and challenge codes work with huge scores', 'Version and update history added to the menu'] },
@@ -1663,10 +1710,11 @@ $('jet').addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagat
 // ---------- physics ----------
 function roofUnder(x, z) {
   const ci = Math.round(x / CELL), cj = Math.round(z / CELL);
+  let top = null;                                           // the highest part under you (harbor buildings have several)
   for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
-    const b = cell(i, j);
-    if (b && x > b.minx - 0.5 && x < b.maxx + 0.5 && z > b.minz - 0.5 && z < b.maxz + 0.5) return b;
+    for (const b of partsOf(cell(i, j))) if (x > b.minx - 0.5 && x < b.maxx + 0.5 && z > b.minz - 0.5 && z < b.maxz + 0.5 && (!top || b.h > top.h)) top = b;
   }
+  if (top) return top;
   // bridges are landable too
   for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
     const br = bridge(i, j);
@@ -1683,9 +1731,8 @@ function collide() {
   if (pos.y < 0.9) return world === 'harbor' ? '海に落下' : '地面に落下';
   const ci = Math.round(pos.x / CELL), cj = Math.round(pos.z / CELL);
   for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
-    const b = cell(i, j); if (!b) continue;
-    if (pos.x > b.minx - 0.5 && pos.x < b.maxx + 0.5 && pos.z > b.minz - 0.5 && pos.z < b.maxz + 0.5 && pos.y < b.h + 0.9)
-      return 'ビルに激突';
+    for (const b of partsOf(cell(i, j)))
+      if (pos.x > b.minx - 0.5 && pos.x < b.maxx + 0.5 && pos.z > b.minz - 0.5 && pos.z < b.maxz + 0.5 && pos.y < b.h + 0.9) return 'ビルに激突';
   }
   let hitBr = null; nearBridges(br => { if (boxDist(br) < 0.5) hitBr = '橋に激突'; });
   if (world === 'harbor') {
@@ -1776,8 +1823,9 @@ function step(dt) {
       const h = Math.hypot(vel.x, vel.z), k = 1 - Math.exp(-2.5 * dt), target = h + (RUN_SPEED - h) * k;
       if (h > 0.1) { vel.x *= target / h; vel.z *= target / h; }
     }
-  } else if (onRoof && onRoof.isShip && roof && roof.cab && !onRoof.cab && roof.ship === onRoof.ship) {
-    pos.y = roof.h + FOOT; vel.y = 0; onRoof = roof;          // walked into the bridge house: step up onto it
+  } else if (onRoof && roof && roof !== onRoof && pos.y < roof.h + FOOT &&
+             ((onRoof.isShip && roof.cab && !onRoof.cab && roof.ship === onRoof.ship) || (!onRoof.isShip && !roof.isShip && roof.h - onRoof.h <= 4.5))) {
+    pos.y = roof.h + FOOT; vel.y = 0; onRoof = roof;          // walked into a slightly higher part (warehouse ridge, ship's bridge house): step up onto it
   } else if (onRoof && roof !== onRoof) {
     onRoof = null;
     if (!ropes.L.on && !ropes.R.on) vel.y = JUMP_V;
@@ -1806,13 +1854,15 @@ function nearMiss(dt) {
   rightV.set(-heading.z, 0, heading.x);
   let single = null, leftB = null, rightB = null;
   for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
-    const b = cell(i, j); if (!b || pos.y > b.h + 0.9) continue;
+    for (const b of partsOf(cell(i, j))) {
+    if (pos.y > b.h + 0.9) continue;
     const nx = Math.min(Math.max(pos.x, b.minx), b.maxx), nz = Math.min(Math.max(pos.z, b.minz), b.maxz);
     const d = Math.hypot(nx - pos.x, nz - pos.z);
     if (d <= 0.5 || d >= W_NEAR) continue;
     const side = (nx - pos.x) * rightV.x + (nz - pos.z) * rightV.z;   // >0 building on the right
     if (side > 0.3) rightB = b; else if (side < -0.3) leftB = b;
     if (d < 3 && !single) single = b;
+    }
   }
   nearBridges(br => { const d = boxDist(br); if (d > 0.5 && d < 3 && !single) single = br; });   // skimming a bridge counts too
   if (leftB) wL = time; if (rightB) wR = time;
@@ -1921,7 +1971,7 @@ function frame(now) {
     $('score').textContent = fmtFit(nFloor(score), 13); if (challenge) updateTarget();
     $('dist').textContent = Math.floor(pathDist);
     $('spd').textContent = Math.round(sp * 3.6);
-    $('warn').style.opacity = pos.y < 12 && !onRoof ? (Math.sin(now / 80) > 0 ? 1 : 0.3) : 0;
+    $('warn').style.opacity = pos.y < (world === 'harbor' ? 9 : 12) && !onRoof ? (Math.sin(now / 80) > 0 ? 1 : 0.3) : 0;
   } else $('warn').style.opacity = 0;
   updateCombo(dt, paused);
   if (popT > 0) { popT -= dt; if (popT <= 0) $('pop').style.opacity = 0; }
