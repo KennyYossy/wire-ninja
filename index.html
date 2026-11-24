@@ -826,14 +826,17 @@ function applyLang() {
   const b = document.getElementById('langBtn'); if (b) b.textContent = lang === 'en' ? '日本語' : 'EN';
   if (typeof showBests === 'function') showBests();
 }
-try { for (const m in BEST_KEY) bests[m] = +localStorage.getItem(BEST_KEY[m]) || 0; } catch (e) {}
+// scores stay finite: anything past SCORE_MAX (or NaN) is pinned there ("カンスト")
+const SCORE_MAX = 1e300, capScore = n => (n < SCORE_MAX ? n : SCORE_MAX);
+// a best saved as Infinity/NaN by the old overflow bug is reset to 0
+try { for (const m in BEST_KEY) { const v = +localStorage.getItem(BEST_KEY[m]) || 0; bests[m] = isFinite(v) && v > 0 ? capScore(v) : 0; if (!isFinite(v)) localStorage.removeItem(BEST_KEY[m]); } } catch (e) {}
 best = bests.normal;
 // score formats for the high-score displays: exponent (1.23e+6) with full kanji numerals underneath
 // 1.23×10⁸ style (superscript digits so it works in plain text too)
 const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
-const fmtExp = n => { if (!(n > 0)) return '0'; const [m, e] = n.toExponential(2).split('e'); return m + '×10' + String(+e).split('').map(c => c === '-' ? '⁻' : SUP[c]).join(''); };
+const fmtExp = n => { if (!(n > 0)) return '0'; if (!isFinite(n)) n = SCORE_MAX; const [m, e] = n.toExponential(2).split('e'); return m + '×10' + String(+e).split('').map(c => c === '-' ? '⁻' : SUP[c]).join(''); };
 // plain number while it fits in `max` characters, exponent form once it would not
-const fmtFit = (n, max) => { const t = Math.round(n).toLocaleString(); return t.length <= max ? t : fmtExp(n); };
+const fmtFit = (n, max) => { if (!(n < SCORE_MAX)) n = n > 0 || n !== n ? SCORE_MAX : n; const t = Math.round(n).toLocaleString(); return t.length <= max ? t : fmtExp(n); };
 function kanjiNum(n) {
   n = Math.floor(n); if (n <= 0) return '零';
   const D = '〇一二三四五六七八九', SM = ['', '十', '百', '千'], BIG = ['', '万', '億', '兆', '京'];
@@ -983,10 +986,10 @@ function bonus(pts, label, gold) {
   if (state !== 'play' || !feat(BONUS_FEAT[label.replace(/^\d+/, '')] || 'x')) return;
   const rate = 1 + combo * 0.05;                         // combo bonus: +5% per current combo
   const total = Math.round(pts * rate);
-  score += total;
+  score = capScore(score + total);
   const cat = /回転ジャンプ$/.test(label) ? '回転ジャンプ' : label; tutEvent('bonus', { label: cat });
   const c = stats.cat[cat] || (stats.cat[cat] = { n: 0, pts: 0 }); c.n++; c.pts += total;
-  const d = document.createElement('div'); d.textContent = labelT(label) + ' +' + total + (combo > 0 ? J('（' + combo + 'コンボ ×' + rate.toFixed(2) + '）', ' (' + combo + ' COMBO ×' + rate.toFixed(2) + ')') : ''); if (gold) d.className = 'gold';
+  const d = document.createElement('div'); d.textContent = labelT(label) + ' +' + fmtFit(total, 9) + (combo > 0 ? J('（' + combo + 'コンボ ×' + rate.toFixed(2) + '）', ' (' + combo + ' COMBO ×' + rate.toFixed(2) + ')') : ''); if (gold) d.className = 'gold';
   comboHit();
   $('feed').appendChild(d); setTimeout(() => d.remove(), 1400);
   while ($('feed').children.length > 3) $('feed').firstChild.remove();
@@ -997,7 +1000,8 @@ function bonus(pts, label, gold) {
 }
 let spinHide = 0;
 // spin bonus for n full rotations: 100, 200, 300, 500, 800, 1300, ... (Fibonacci-like)
-function spinPts(n) { let a = 100, b = 200; if (n <= 1) return 100; for (let k = 2; k < n; k++) [a, b] = [b, a + b]; return b; }
+const SPIN_CAP = 1000; // Fibonacci passes Number.MAX_VALUE near 1476 rotations; 1000 ≈ 7×10²⁰⁸ pt
+function spinPts(n) { n = Math.min(n, SPIN_CAP); let a = 100, b = 200; if (n <= 1) return 100; for (let k = 2; k < n; k++) [a, b] = [b, a + b]; return b; }
 const stats = { distPts: 0, cat: {}, maxCombo: 0, maxSpin: 0, maxSpeed: 0, golds: 0, blues: 0, silvers: 0 };
 function resetStats() { stats.distPts = 0; stats.cat = {}; stats.maxCombo = 0; stats.maxSpin = 0; stats.maxSpeed = 0; stats.golds = 0; stats.blues = 0; stats.silvers = 0; }
 let combo = 0, comboT = 0, comboMax = 10, comboTime = 3, accelMul = 1;
@@ -1051,7 +1055,7 @@ function spinTick(n) {
   const el = $('spin'); el.hidden = false; el.classList.remove('win', 'fail');
   comboHit();
   const lv = Math.min(8, n);
-  $('spinN').textContent = n; $('spinPts').textContent = '+' + spinPts(n) + '?';
+  $('spinN').textContent = fmtFit(n, 7); $('spinPts').textContent = '+' + fmtFit(spinPts(n), 9) + '?';
   $('spinRank').textContent = SPIN_RANKS[lv - 1] + (lv === 8 ? '!!' : lv >= 5 ? '!' : '');
   for (let k = 1; k <= 8; k++) el.classList.toggle('lv' + k, k === lv);
   retrigger(el, 'tick'); spinHide = 9;
@@ -1067,8 +1071,8 @@ function endFlip() {
   if (n < 1) return;
   if (f.t < 1.5) { $('spinPts').textContent = J('滞空不足', 'NOT ENOUGH AIR'); $('spin').classList.add('fail'); spinHide = 0.9; return; }
   const pts = spinPts(n); stats.maxSpin = Math.max(stats.maxSpin, n);
-  $('spinPts').textContent = J('成功！ +', 'NICE! +') + pts; retrigger($('spin'), 'win'); spinHide = 1.3;
-  bonus(pts, n + '回転ジャンプ', n >= 3);
+  $('spinPts').textContent = J('成功！ +', 'NICE! +') + fmtFit(pts, 9); retrigger($('spin'), 'win'); spinHide = 1.3;
+  bonus(pts, Math.min(n, 1e15) + '回転ジャンプ', n >= 3);
   burst(pos, Math.min(140, 60 + n * 20), 12 + n * 2); shakeT = Math.max(shakeT, 0.3);
 }
 function pop(text) { $('pop').textContent = text; $('pop').style.opacity = 1; popT = 0.7; }
@@ -1107,7 +1111,7 @@ function gameOver(why) {
   const esc = t => String(t).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]);
   $('breakdown').innerHTML = rows.map(r => '<dt>' + esc(r[0]) + '</dt><dd class="n">' + r[1] + '</dd><dd class="v">' + fmtFit(r[2], 9) + '</dd>').join('')
     + '<dt class="total">' + J('合計', 'Total') + '</dt><dd class="total"></dd><dd class="total">' + fmtFit(d, 9) + '</dd>';
-  const st = [[stats.maxCombo, J('最大コンボ', 'Max combo')], [stats.maxSpin ? stats.maxSpin + J('回転', 'x') : '-', J('最多回転', 'Most spins')], [Math.round(stats.maxSpeed * 3.6), J('最高 km/h', 'Top km/h')],
+  const st = [[stats.maxCombo, J('最大コンボ', 'Max combo')], [stats.maxSpin ? fmtFit(stats.maxSpin, 7) + J('回転', 'x') : '-', J('最多回転', 'Most spins')], [Math.round(stats.maxSpeed * 3.6), J('最高 km/h', 'Top km/h')],
               [stats.blues, J('青アイテム', 'Blue')], [stats.golds, J('金アイテム', 'Gold')], [stats.silvers, J('銀アイテム', 'Silver')]];
   $('stats').innerHTML = st.map(x => '<div><b>' + x[0] + '</b><small>' + x[1] + '</small></div>').join('');
   $('final').textContent = '0';
@@ -1143,12 +1147,17 @@ function showLocks() {
 const GAME_URL = /\.github\.io$/.test(location.hostname) ? location.origin + location.pathname : 'https://kennyyossy.github.io/wire-ninja/';
 const MODE_LETTER = { normal: 'N', dopa: 'D', super: 'S', kyoku: 'K' };
 let challenge = null, chalWon = false;
-function parseCode(t) { const m = /^\s*([NDSK])\s*-?\s*(\d{1,15})\s*$/i.exec(t || ''); if (!m) return null;
-  const mode = Object.keys(MODE_LETTER).find(k => MODE_LETTER[k] === m[1].toUpperCase()); return { mode, score: +m[2] }; }
-function chalCode(m, sc) { return MODE_LETTER[m] + '-' + sc; }
+// code score: plain digits (≤15) or, for huge scores, a 15-digit mantissa + e<exponent> (e.g. K-703303677114228e194)
+function scoreTok(sc) { sc = Math.floor(capScore(sc)); if (sc < 1e15) return String(sc);
+  const e = Math.floor(Math.log10(sc)) - 14; let m = Math.floor(sc / Math.pow(10, e)); if (m >= 1e15) { m = Math.floor(m / 10); e++; } return m + 'e' + e; }
+function parseTok(t) { const m = /^(\d{1,15})(?:e\+?(\d{1,3}))?$/i.exec(String(t || '').trim()); if (!m) return 0; const v = +m[1] * Math.pow(10, +(m[2] || 0)); return isFinite(v) ? capScore(v) : 0; }
+function parseCode(t) { const m = /^\s*([NDSK])\s*-?\s*(\d{1,15}(?:e\+?\d{1,3})?)\s*$/i.exec(t || ''); if (!m) return null;
+  const sc = parseTok(m[2]); if (!(sc > 0)) return null;
+  const mode = Object.keys(MODE_LETTER).find(k => MODE_LETTER[k] === m[1].toUpperCase()); return { mode, score: sc }; }
+function chalCode(m, sc) { return MODE_LETTER[m] + '-' + scoreTok(sc); }
 function readChallengeURL() {
   try { const q = new URLSearchParams(location.search || location.hash.replace(/^#/, '?'));
-    const sc = parseInt(q.get('challenge'), 10), m = q.get('mode') || 'normal';
+    const sc = parseTok(q.get('challenge')), m = q.get('mode') || 'normal';
     if (sc > 0 && MODE_LETTER[m]) challenge = { mode: m, score: sc }; else if (q.get('c')) challenge = parseCode(q.get('c')); } catch (e) {}
 }
 function modeLabel(m) { return MODE_NAME[m] || J('通常', 'Normal'); }
@@ -1171,7 +1180,7 @@ function shareText(sc) {
   return J('WIRE NINJA' + name + 'で ' + fmtFit(sc, 13) + ' pt 出した！これを超えられる？\n挑戦コード: ' + chalCode(mode, sc),
     'I scored ' + fmtFit(sc, 13) + ' pt in WIRE NINJA' + name + '! Can you beat it?\nChallenge code: ' + chalCode(mode, sc));
 }
-function shareURL(sc) { return GAME_URL + '?challenge=' + sc + '&mode=' + mode; }
+function shareURL(sc) { return GAME_URL + '?challenge=' + scoreTok(sc) + '&mode=' + mode; }
 let lastScore = 0;
 function shareMsg(t) { $('shareMsg').textContent = t || ''; }
 function selectShare() { const ta = $('shareText'); ta.focus(); ta.select(); try { ta.setSelectionRange(0, ta.value.length); } catch (e) {} }
@@ -1374,7 +1383,7 @@ function step(dt) {
   if (hs < P.MINSPD) { vel.x += heading.x * (P.MINSPD - hs) * 2 * dt; vel.z += heading.z * (P.MINSPD - hs) * 2 * dt; }
   const prevY = pos.y, prevX = pos.x, prevZ = pos.z;
   pos.addScaledVector(vel, dt);
-  const hd = Math.hypot(vel.x, vel.z) * dt; pathDist += hd; score += hd * 10; stats.distPts += hd * 10;
+  const hd = Math.hypot(vel.x, vel.z) * dt; pathDist += hd; score = capScore(score + hd * 10); stats.distPts += hd * 10;
   stats.maxSpeed = Math.max(stats.maxSpeed, vel.length());
   uT += dt; uCD -= dt; const uh = Math.hypot(vel.x, vel.z);
   if (state === 'play' && !onRoof && uh > 6 && uT - uSample >= 0.1) {
@@ -1555,7 +1564,7 @@ function frame(now) {
 
   // HUD
   if (state === 'play') {
-    $('score').textContent = Math.floor(score).toLocaleString(); if (challenge) updateTarget();
+    $('score').textContent = fmtFit(Math.floor(score), 13); if (challenge) updateTarget();
     $('dist').textContent = Math.floor(pathDist);
     $('spd').textContent = Math.round(sp * 3.6);
     $('warn').style.opacity = pos.y < 12 ? (Math.sin(now / 80) > 0 ? 1 : 0.3) : 0;
