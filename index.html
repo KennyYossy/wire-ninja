@@ -228,6 +228,8 @@ body.no-combo #combo{display:none}
 .rulecard dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:13px}
 .rulecard dt{color:#fff;font-weight:700;white-space:nowrap}.rulecard dd{margin:0;color:var(--ink)}
 .rulecard .go{align-self:center;margin-top:8px}
+.ver{font-size:11px;color:var(--dim);margin-top:-6px}
+#newsList h2 span{font:500 12px var(--body);color:var(--dim);letter-spacing:0;margin-left:8px}
 
 #feed{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
 #feed div{font:700 17px var(--display);color:var(--amber);white-space:nowrap;text-shadow:0 0 8px rgba(255,181,58,.8);animation:feed 1.4s ease-out forwards}
@@ -315,6 +317,7 @@ body.no-combo #combo{display:none}
       </div>
     </div>
     <div class="codeRow"><button class="link" id="codeBtn" type="button" data-en="Enter a challenge code">挑戦コードを入力</button><span id="codeBox" hidden><input id="codeIn" type="text" inputmode="text" autocomplete="off" placeholder="D-12345" aria-label="challenge code"><button class="ghost" id="codeOk" type="button">OK</button></span></div>
+    <button class="link ver" id="verBtn" type="button"></button>
     <p class="hint" data-en="Left half = left wire / Right half = right wire">左半分＝左ワイヤー ／ 右半分＝右ワイヤー</p>
     <p class="warn" data-en="⚠ This game may contain flashing lights and intense motion. If you feel unwell, stop playing and rest right away.">⚠ このゲームには光の点滅や激しい動きが含まれる場合があります。気分が悪くなったらすぐにプレイをやめて休んでください。</p>
   </div>
@@ -349,6 +352,13 @@ body.no-combo #combo{display:none}
       <dt data-en="Combo">コンボ</dt><dd data-en="+5% per combo on every bonus">ボーナスごとに＋コンボ数×5%</dd>
     </dl>
     <button class="go" id="rulesClose" type="button" data-en="Close">閉じる</button>
+  </div>
+</div>
+<div class="overlay" id="news" hidden>
+  <div class="card rulecard">
+    <p class="sub" data-en="UPDATE HISTORY">アップデート履歴</p>
+    <div id="newsList"></div>
+    <button class="go" id="newsClose" type="button" data-en="Close">閉じる</button>
   </div>
 </div>
 <div id="tut" hidden>
@@ -613,7 +623,9 @@ const itemGeo = new THREE.OctahedronGeometry(2.6);
 const itemMat = { blue: new THREE.MeshBasicMaterial({ color: 0x4fa8ff }), gold: new THREE.MeshBasicMaterial({ color: 0xffd23a }), silver: new THREE.MeshBasicMaterial({ color: 0xe4ecf5 }) };
 // item mix: silver is half as common as gold, blue the rest (blue/gold counts kept from before silver existed)
 const GOLD_SHARE = 0.367, SILVER_SHARE = 0.183, SPIN_BOOST = 1.2;
-let spinMul = 1;
+let spinMul = 1, spinLg = 0, accelLg = 0;                    // spinMul/accelMul for physics (bounded), *Lg for the true value
+const fmtMul = lg => lg < 6 ? Math.pow(10, lg).toFixed(2) : fmtLg(lg);
+const VIS_SPIN = Math.PI * 2 * 12;                        // on-screen spin is capped at 12 rot/s; the real count keeps going
 const ringGeo = new THREE.TorusGeometry(3.9, 0.18, 6, 28);
 // items are drawn as instanced meshes: 2 draw calls per colour instead of 2 per item (big win in the ドパガキ modes)
 const itemInst = {};
@@ -825,15 +837,46 @@ function applyLang() {
   const jet = document.getElementById('jet'); if (jet) { if (!jet.dataset.jaLabel) jet.dataset.jaLabel = jet.getAttribute('aria-label'); jet.setAttribute('aria-label', lang === 'en' ? jet.dataset.enLabel : jet.dataset.jaLabel); }
   const b = document.getElementById('langBtn'); if (b) b.textContent = lang === 'en' ? '日本語' : 'EN';
   if (typeof showBests === 'function') showBests();
+  if (typeof showVersion === 'function') showVersion();
 }
-try { for (const m in BEST_KEY) bests[m] = +localStorage.getItem(BEST_KEY[m]) || 0; } catch (e) {}
+// ---------- big scores ----------
+// a score is a plain number while it stays below 1e300, and becomes { lg: log10(score) } beyond that,
+// so 極ドパガキ can go far past what a JS number holds (up to 10^(10^300)).
+const BIG = 1e300, LG_MAX = 1e300;
+const isBig = v => typeof v === 'object' && v !== null;
+const toLg = v => isBig(v) ? v.lg : (v > 0 ? Math.log10(v) : -Infinity);
+const fromLg = lg => !(lg > -Infinity) ? 0 : lg < 300 ? Math.pow(10, lg) : { lg: Math.min(lg, LG_MAX) };
+function lgAdd(a, b) { if (a < b) [a, b] = [b, a]; if (!(b > -Infinity)) return a; return b - a < -17 ? a : a + Math.log10(1 + Math.pow(10, b - a)); }
+function nAdd(a, b) {
+  if (!isBig(a) && !isBig(b)) { const r = a + b; if (r < BIG) return r; }
+  return fromLg(lgAdd(toLg(a), toLg(b)));
+}
+function nSub(a, b) {                                     // a - b, never below 0
+  if (!isBig(a) && !isBig(b)) return Math.max(0, a - b);
+  const la = toLg(a), lb = toLg(b); if (!(la > lb)) return 0;
+  const d = lb - la; return d < -17 ? fromLg(la) : fromLg(la + Math.log10(1 - Math.pow(10, d)));
+}
+function nMul(a, k) { if (!isBig(a)) { const r = a * k; if (r < BIG) return r; } return fromLg(toLg(a) + Math.log10(k)); }
+const nGt = (a, b) => (!isBig(a) && !isBig(b)) ? a > b : toLg(a) > toLg(b);
+const nFloor = v => isBig(v) ? v : Math.floor(v);
+// best scores: plain digits, or "lg:<log10>" once they pass 1e300; an old Infinity/NaN best (overflow bug) is reset to 0
+const saveNum = v => isBig(v) ? 'lg:' + v.lg : String(v);
+function loadNum(t) { t = String(t || ''); if (t.startsWith('lg:')) { const lg = +t.slice(3); return lg > 0 && isFinite(lg) ? fromLg(lg) : 0; } const v = +t; return v > 0 && isFinite(v) ? v : 0; }
+try { for (const m in BEST_KEY) { const raw = localStorage.getItem(BEST_KEY[m]); bests[m] = loadNum(raw); if (raw && !bests[m]) localStorage.removeItem(BEST_KEY[m]); } } catch (e) {}
 best = bests.normal;
 // score formats for the high-score displays: exponent (1.23e+6) with full kanji numerals underneath
 // 1.23×10⁸ style (superscript digits so it works in plain text too)
 const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
-const fmtExp = n => { if (!(n > 0)) return '0'; const [m, e] = n.toExponential(2).split('e'); return m + '×10' + String(+e).split('').map(c => c === '-' ? '⁻' : SUP[c]).join(''); };
+const supNum = t => String(t).split('').map(c => c === '-' ? '⁻' : SUP[c] || c).join('');
+function fmtLg(lg) {                                       // log10 value -> 1.23×10⁴⁵⁶ (or 1.0×10^(2.09×10³⁷) for truly absurd ones)
+  if (!(lg > -Infinity)) return '0';
+  let e = Math.floor(lg), m = Math.pow(10, lg - e);
+  if (e < 1e15) { if (m.toFixed(2) === '10.00') { m = 1; e++; } return m.toFixed(2) + '×10' + supNum(e); }
+  return '10^(' + fmtLg(Math.log10(lg)) + ')';
+}
+const fmtExp = n => isBig(n) ? fmtLg(n.lg) : !(n > 0) ? '0' : fmtLg(Math.log10(n));
 // plain number while it fits in `max` characters, exponent form once it would not
-const fmtFit = (n, max) => { const t = Math.round(n).toLocaleString(); return t.length <= max ? t : fmtExp(n); };
+const fmtFit = (n, max) => { if (isBig(n)) return fmtExp(n); if (n !== n) n = 0; const t = Math.round(n).toLocaleString(); return t.length <= max ? t : fmtExp(n); };
 function kanjiNum(n) {
   n = Math.floor(n); if (n <= 0) return '零';
   const D = '〇一二三四五六七八九', SM = ['', '十', '百', '千'], BIG = ['', '万', '億', '兆', '京'];
@@ -856,7 +899,7 @@ const held = { L: false, R: false };
 function reset() {
   pos.set(0, 50, 8); vel.set(0, 7, -24); heading.set(0, 0, -1); camHead.copy(heading);
   maxDist = 0; time = 0; wL = wR = -9; wCD = 0; groundArmed = true; uHist.length = 0; uT = uSample = uCD = 0; pendingNear.length = 0; onRoof = null; flip = null; score = 0; pathDist = 0; nearCD = 0; lastNear = null;
-  body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0; jetCD = 0; jetT = 0; spinMul = 1; $('mul').hidden = true; combo = 0; comboT = 0; comboMax = 10; comboTime = 3; accelMul = 1; jetMul = 1; jetMax = JET_CD; resetStats();
+  body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0; jetCD = 0; jetT = 0; spinMul = 1; spinLg = 0; accelLg = 0; $('mul').hidden = true; combo = 0; comboT = 0; comboMax = 10; comboTime = 3; accelMul = 1; jetMul = 1; jetMax = JET_CD; resetStats();
   for (const s of ['L', 'R']) { ropes[s].reelT = 0; ropes[s].snapped = false; ropes[s].t = 0; }
   for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; }
   builtCell = null; rebuildCity(pos.x, pos.z);
@@ -919,7 +962,7 @@ function detach(side) {
   r.on = false; r.mesh.visible = false;
   if (!ropes.L.on && !ropes.R.on) {
     const sp = vel.length(); tutEvent('release', { sp });
-    if (vel.y >= 16 && !onRoof && feat('spin')) flip = { t: 0, ang: 0, rate: Math.PI * 2 * Math.min(1.0, 0.4 + (vel.y - 16) * 0.03) * spinMul };
+    if (vel.y >= 16 && !onRoof && feat('spin')) flip = { t: 0, ang: 0, A: 0, lgR: Math.log10(Math.PI * 2 * Math.min(1.0, 0.4 + (vel.y - 16) * 0.03)) + spinLg };
   }
 }
 
@@ -967,7 +1010,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'ArrowLeft' || e.key === 'a') { keys.L = true; refreshHeld(); }
   if (e.key === 'ArrowRight' || e.key === 'd') { keys.R = true; refreshHeld(); }
   if ((e.key === ' ' || e.key === 'Enter') && state === 'tutready') tutBegin();
-  else if ((e.key === ' ' || e.key === 'Enter') && state !== 'play' && $('tutDone').hidden && $('rules').hidden) startGame();
+  else if ((e.key === ' ' || e.key === 'Enter') && state !== 'play' && $('tutDone').hidden && $('rules').hidden && $('news').hidden) startGame();
   const jk = { w: 'up', s: 'down', q: 'left', e: 'right' }[e.key]; if (jk) fireJet(jk);
 });
 window.addEventListener('keyup', e => {
@@ -979,25 +1022,35 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 // ---------- UI ----------
 const $ = id => document.getElementById(id);
 let popT = 0;
-function bonus(pts, label, gold) {
+function bonus(pts, label, gold, spinN) {
   if (state !== 'play' || !feat(BONUS_FEAT[label.replace(/^\d+/, '')] || 'x')) return;
   const rate = 1 + combo * 0.05;                         // combo bonus: +5% per current combo
-  const total = Math.round(pts * rate);
-  score += total;
+  const total = isBig(pts) ? nMul(pts, rate) : Math.round(pts * rate);
+  score = nAdd(score, total);
   const cat = /回転ジャンプ$/.test(label) ? '回転ジャンプ' : label; tutEvent('bonus', { label: cat });
-  const c = stats.cat[cat] || (stats.cat[cat] = { n: 0, pts: 0 }); c.n++; c.pts += total;
-  const d = document.createElement('div'); d.textContent = labelT(label) + ' +' + total + (combo > 0 ? J('（' + combo + 'コンボ ×' + rate.toFixed(2) + '）', ' (' + combo + ' COMBO ×' + rate.toFixed(2) + ')') : ''); if (gold) d.className = 'gold';
+  const c = stats.cat[cat] || (stats.cat[cat] = { n: 0, pts: 0 }); c.n++; c.pts = nAdd(c.pts, total);
+  const d = document.createElement('div'); d.textContent = (spinN != null ? J(spinN + '回転ジャンプ', spinN + 'x SPIN JUMP') : labelT(label)) + ' +' + fmtFit(total, 9) + (combo > 0 ? J('（' + combo + 'コンボ ×' + rate.toFixed(2) + '）', ' (' + combo + ' COMBO ×' + rate.toFixed(2) + ')') : ''); if (gold) d.className = 'gold';
   comboHit();
   $('feed').appendChild(d); setTimeout(() => d.remove(), 1400);
   while ($('feed').children.length > 3) $('feed').firstChild.remove();
-  burst(pos, Math.min(90, 12 + pts / 10), 7 + pts / 120);
-  shakeT = Math.max(shakeT, Math.min(0.3, 0.06 + pts / 2600));
-  flashScreen(gold ? 'rgba(255,210,58,.3)' : pts >= 500 ? 'rgba(53,242,255,.22)' : 'rgba(255,63,180,.12)');
+  const pv = isBig(pts) ? 1e9 : pts; burst(pos, Math.min(90, 12 + pv / 10), Math.min(30, 7 + pv / 120));
+  shakeT = Math.max(shakeT, Math.min(0.3, 0.06 + pv / 2600));
+  flashScreen(gold ? 'rgba(255,210,58,.3)' : pv >= 500 ? 'rgba(53,242,255,.22)' : 'rgba(255,63,180,.12)');
   retrigger($('score'), 'bump');
 }
 let spinHide = 0;
 // spin bonus for n full rotations: 100, 200, 300, 500, 800, 1300, ... (Fibonacci-like)
-function spinPts(n) { let a = 100, b = 200; if (n <= 1) return 100; for (let k = 2; k < n; k++) [a, b] = [b, a + b]; return b; }
+// exact up to 1400 rotations (~10²⁹²); past that each rotation multiplies by φ, kept in log10 form
+const FIB_EXACT = 1400, LOG_PHI = Math.log10((1 + Math.sqrt(5)) / 2);
+function fibPts(n) { let a = 100, b = 200; if (n <= 1) return 100; for (let k = 2; k < n; k++) [a, b] = [b, a + b]; return b; }
+const LG_FIB_EXACT = Math.log10(fibPts(FIB_EXACT));
+function spinPts(n) {
+  if (!isBig(n) && n <= FIB_EXACT) return fibPts(n);
+  const extra = isBig(n) ? Math.pow(10, n.lg) : n - FIB_EXACT;   // rotations beyond the exact range
+  return fromLg(LG_FIB_EXACT + extra * LOG_PHI);
+}
+// full rotations from a true angle (number or {lg})
+const spinCount = A => isBig(A) ? (A.lg - Math.log10(Math.PI * 2) < 15 ? Math.floor(Math.pow(10, A.lg) / (Math.PI * 2)) : { lg: A.lg - Math.log10(Math.PI * 2) }) : Math.floor(A / (Math.PI * 2));
 const stats = { distPts: 0, cat: {}, maxCombo: 0, maxSpin: 0, maxSpeed: 0, golds: 0, blues: 0, silvers: 0 };
 function resetStats() { stats.distPts = 0; stats.cat = {}; stats.maxCombo = 0; stats.maxSpin = 0; stats.maxSpeed = 0; stats.golds = 0; stats.blues = 0; stats.silvers = 0; }
 let combo = 0, comboT = 0, comboMax = 10, comboTime = 3, accelMul = 1;
@@ -1020,18 +1073,18 @@ function updateCombo(dt, paused) {
 }
 function showMul() {
   const parts = [];
-  if (spinMul > 1.001) parts.push(J('回転', 'SPIN') + ' ×' + spinMul.toFixed(2));
-  if (accelMul > 1.001) parts.push(J('加速', 'ACCEL') + ' ×' + accelMul.toFixed(2));
+  if (spinLg > 0.0005) parts.push(J('回転', 'SPIN') + ' ×' + fmtMul(spinLg));
+  if (accelLg > 0.0005) parts.push(J('加速', 'ACCEL') + ' ×' + fmtMul(accelLg));
   if (jetMul < 0.999) parts.push(J('ジェット ', 'JET ') + (JET_CD * jetMul).toFixed(1) + J('秒', 's'));
   $('mul').textContent = parts.join(' ・ '); $('mul').hidden = !parts.length; retrigger($('mul'), 'bump');
 }
 function goldPickup() {
   if (!feat('gold')) return;
-  spinMul *= SPIN_BOOST;
-  if (flip) flip.rate *= SPIN_BOOST;                      // a jump already in the air speeds up too
-  accelMul *= 1.1;
-  const d = document.createElement('div'); d.className = 'gold'; d.textContent = J('回転スピードUP', 'SPIN SPEED UP') + ' ×' + spinMul.toFixed(2);
-  const d2 = document.createElement('div'); d2.className = 'accel'; d2.textContent = J('加速力UP', 'ACCEL UP') + ' ×' + accelMul.toFixed(2);
+  spinMul *= SPIN_BOOST; spinLg += Math.log10(SPIN_BOOST);
+  if (flip) flip.lgR += Math.log10(SPIN_BOOST);           // a jump already in the air speeds up too
+  accelMul = Math.min(1e6, accelMul * 1.1); accelLg += Math.log10(1.1);   // speed is capped anyway; 1e6 keeps the maths finite
+  const d = document.createElement('div'); d.className = 'gold'; d.textContent = J('回転スピードUP', 'SPIN SPEED UP') + ' ×' + fmtMul(spinLg);
+  const d2 = document.createElement('div'); d2.className = 'accel'; d2.textContent = J('加速力UP', 'ACCEL UP') + ' ×' + fmtMul(accelLg);
   $('feed').appendChild(d); $('feed').appendChild(d2); setTimeout(() => d.remove(), 1400); setTimeout(() => d2.remove(), 1600);
   burst(pos, 50, 10); shakeT = Math.max(shakeT, 0.12); flashScreen('rgba(255,210,58,.22)');
   showMul(); comboHit(); stats.golds++;
@@ -1050,8 +1103,8 @@ function silverPickup() {
 function spinTick(n) {
   const el = $('spin'); el.hidden = false; el.classList.remove('win', 'fail');
   comboHit();
-  const lv = Math.min(8, n);
-  $('spinN').textContent = n; $('spinPts').textContent = '+' + spinPts(n) + '?';
+  const lv = isBig(n) ? 8 : Math.min(8, n);
+  $('spinN').textContent = fmtFit(n, 7); $('spinPts').textContent = '+' + fmtFit(spinPts(n), 9) + '?';
   $('spinRank').textContent = SPIN_RANKS[lv - 1] + (lv === 8 ? '!!' : lv >= 5 ? '!' : '');
   for (let k = 1; k <= 8; k++) el.classList.toggle('lv' + k, k === lv);
   retrigger(el, 'tick'); spinHide = 9;
@@ -1063,13 +1116,13 @@ function spinTick(n) {
 function endFlip() {
   if (!flip) return;
   const f = flip; flip = null; body.rotation.x = 0;
-  const n = Math.floor(f.ang / (Math.PI * 2));
-  if (n < 1) return;
+  const n = spinCount(f.A);
+  if (!nGt(n, 0)) return;
   if (f.t < 1.5) { $('spinPts').textContent = J('滞空不足', 'NOT ENOUGH AIR'); $('spin').classList.add('fail'); spinHide = 0.9; return; }
-  const pts = spinPts(n); stats.maxSpin = Math.max(stats.maxSpin, n);
-  $('spinPts').textContent = J('成功！ +', 'NICE! +') + pts; retrigger($('spin'), 'win'); spinHide = 1.3;
-  bonus(pts, n + '回転ジャンプ', n >= 3);
-  burst(pos, Math.min(140, 60 + n * 20), 12 + n * 2); shakeT = Math.max(shakeT, 0.3);
+  const pts = spinPts(n); if (nGt(n, stats.maxSpin)) stats.maxSpin = n;
+  $('spinPts').textContent = J('成功！ +', 'NICE! +') + fmtFit(pts, 9); retrigger($('spin'), 'win'); spinHide = 1.3;
+  bonus(pts, '回転ジャンプ', nGt(n, 2), fmtFit(n, 9));
+  const nn = isBig(n) ? 1e9 : n; burst(pos, Math.min(140, 60 + nn * 20), Math.min(40, 12 + nn * 2)); shakeT = Math.max(shakeT, 0.3);
 }
 function pop(text) { $('pop').textContent = text; $('pop').style.opacity = 1; popT = 0.7; }
 function startGame(m) {
@@ -1090,16 +1143,16 @@ function gameOver(why) {
   burst(pos, 80, 12); shakeT = 0.4; flashScreen('rgba(255,40,80,.3)');
   countPlay();
   best = bests[mode];
-  const d = Math.floor(score), prevBest = best, isNew = d > prevBest && d > 0;
-  if (isNew) { best = bests[mode] = d; try { localStorage.setItem(BEST_KEY[mode], String(best)); } catch (e) {} }
+  const d = nFloor(score), prevBest = best, isNew = nGt(d, prevBest) && nGt(d, 0);
+  if (isNew) { best = bests[mode] = d; try { localStorage.setItem(BEST_KEY[mode], saveNum(best)); } catch (e) {} }
   $('overMode').textContent = MODE_NAME[mode] ? MODE_NAME[mode] + ' ・ ' : '';
   $('why').textContent = labelT(why);
   $('record').hidden = !isNew; lastScore = d; $('sharePanel').hidden = true;
   { const cr = $('chalRes'), on = !!challenge && challenge.mode === mode; cr.hidden = !on;
-    if (on) { const w = d > challenge.score; cr.classList.toggle('won', w);
-      cr.textContent = w ? J('挑戦成功！ ' + fmtFit(challenge.score, 13) + ' pt を ' + fmtFit(d - challenge.score, 13) + ' pt 上回った', 'Challenge won! Beat ' + fmtFit(challenge.score, 13) + ' pt by ' + fmtFit(d - challenge.score, 13) + ' pt')
-                         : J('挑戦失敗… 目標 ' + fmtFit(challenge.score, 13) + ' pt まであと ' + fmtFit(challenge.score - d + 1, 13) + ' pt', 'Challenge lost… ' + fmtFit(challenge.score - d + 1, 13) + ' pt short of ' + fmtFit(challenge.score, 13) + ' pt'); } }
-  $('best').innerHTML = isNew ? (prevBest > 0 ? J('前のベスト ', 'Previous best ') + fmtFit(prevBest, 13) + ' pt' : J('初めての記録', 'First record')) : J('ベスト ', 'Best ') + fmtFit(best, 13) + J(' pt（あと ', ' pt (') + fmtFit(best - d, 13) + J(' pt）', ' pt to go)');
+    if (on) { const w = nGt(d, challenge.score); cr.classList.toggle('won', w);
+      cr.textContent = w ? J('挑戦成功！ ' + fmtFit(challenge.score, 13) + ' pt を ' + fmtFit(nSub(d, challenge.score), 13) + ' pt 上回った', 'Challenge won! Beat ' + fmtFit(challenge.score, 13) + ' pt by ' + fmtFit(nSub(d, challenge.score), 13) + ' pt')
+                         : J('挑戦失敗… 目標 ' + fmtFit(challenge.score, 13) + ' pt まであと ' + fmtFit(nAdd(nSub(challenge.score, d), 1), 13) + ' pt', 'Challenge lost… ' + fmtFit(nAdd(nSub(challenge.score, d), 1), 13) + ' pt short of ' + fmtFit(challenge.score, 13) + ' pt'); } }
+  $('best').innerHTML = isNew ? (nGt(prevBest, 0) ? J('前のベスト ', 'Previous best ') + fmtFit(prevBest, 13) + ' pt' : J('初めての記録', 'First record')) : J('ベスト ', 'Best ') + fmtFit(best, 13) + J(' pt（あと ', ' pt (') + fmtFit(nSub(best, d), 13) + J(' pt）', ' pt to go)');
   // breakdown
   const order = ['アイテム', '橋くぐり', '橋に着地', 'すれすれ', 'Wスレスレ', '地面すれすれ', '着地', '回転ジャンプ', 'バックフリップ'];
   const rows = [[J('移動距離 ', 'Distance ') + Math.floor(pathDist) + ' m', '', Math.round(stats.distPts)]];
@@ -1107,16 +1160,16 @@ function gameOver(why) {
   const esc = t => String(t).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]);
   $('breakdown').innerHTML = rows.map(r => '<dt>' + esc(r[0]) + '</dt><dd class="n">' + r[1] + '</dd><dd class="v">' + fmtFit(r[2], 9) + '</dd>').join('')
     + '<dt class="total">' + J('合計', 'Total') + '</dt><dd class="total"></dd><dd class="total">' + fmtFit(d, 9) + '</dd>';
-  const st = [[stats.maxCombo, J('最大コンボ', 'Max combo')], [stats.maxSpin ? stats.maxSpin + J('回転', 'x') : '-', J('最多回転', 'Most spins')], [Math.round(stats.maxSpeed * 3.6), J('最高 km/h', 'Top km/h')],
+  const st = [[stats.maxCombo, J('最大コンボ', 'Max combo')], [stats.maxSpin ? fmtFit(stats.maxSpin, 7) + J('回転', 'x') : '-', J('最多回転', 'Most spins')], [Math.round(stats.maxSpeed * 3.6), J('最高 km/h', 'Top km/h')],
               [stats.blues, J('青アイテム', 'Blue')], [stats.golds, J('金アイテム', 'Gold')], [stats.silvers, J('銀アイテム', 'Silver')]];
   $('stats').innerHTML = st.map(x => '<div><b>' + x[0] + '</b><small>' + x[1] + '</small></div>').join('');
   $('final').textContent = '0';
   setTimeout(() => {
     $('over').hidden = false;
     // count the score up
-    const t0 = performance.now(), dur = Math.min(1400, 400 + d / 20);
+    const t0 = performance.now(), dur = isBig(d) ? 1400 : Math.min(1400, 400 + d / 20);
     (function tick(now) { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-      const v = Math.round(d * e); $('final').textContent = fmtFit(v, 9); if (k < 1 && state === 'over') requestAnimationFrame(tick); })(t0);
+      const v = isBig(d) ? (e >= 1 ? d : fromLg(d.lg * e)) : Math.round(d * e); $('final').textContent = fmtFit(v, 9); if (k < 1 && state === 'over') requestAnimationFrame(tick); })(t0);
   }, 450);
 }
 $('start').addEventListener('click', () => startGame('normal'));
@@ -1143,13 +1196,29 @@ function showLocks() {
 const GAME_URL = /\.github\.io$/.test(location.hostname) ? location.origin + location.pathname : 'https://kennyyossy.github.io/wire-ninja/';
 const MODE_LETTER = { normal: 'N', dopa: 'D', super: 'S', kyoku: 'K' };
 let challenge = null, chalWon = false;
-function parseCode(t) { const m = /^\s*([NDSK])\s*-?\s*(\d{1,15})\s*$/i.exec(t || ''); if (!m) return null;
-  const mode = Object.keys(MODE_LETTER).find(k => MODE_LETTER[k] === m[1].toUpperCase()); return { mode, score: +m[2] }; }
-function chalCode(m, sc) { return MODE_LETTER[m] + '-' + sc; }
+// code score: plain digits (≤15), a 15-digit mantissa + e<exponent> (K-703303677114228e194), or L<log10> past 10^(10^15)
+function scoreTok(sc) {
+  if (!isBig(sc)) { sc = Math.floor(sc); if (sc < 1e15) return String(Math.max(0, sc)); }
+  const lg = toLg(sc);
+  if (lg >= 1e15) return 'L' + lg.toExponential(12).replace('+', '');      // 10^(10^15) and up: K-L2.090000000000e37
+  let e = Math.floor(lg) - 14, m = Math.floor(Math.pow(10, lg - e) + 1e-6); if (m >= 1e15) { m = Math.floor(m / 10); e++; }
+  return m + 'e' + e;
+}
+function parseTok(t) {
+  t = String(t || '').trim();
+  let m = /^L(\d+(?:\.\d+)?(?:e\+?\d{1,3})?)$/i.exec(t);
+  if (m) { const lg = +m[1]; return lg > 0 && isFinite(lg) ? fromLg(lg) : 0; }
+  m = /^(\d{1,15})(?:e\+?(\d{1,16}))?$/i.exec(t); if (!m || !(+m[1] > 0)) return 0;
+  return m[2] ? fromLg(Math.log10(+m[1]) + +m[2]) : +m[1];
+}
+function parseCode(t) { const m = /^\s*([NDSK])\s*-?\s*(L[\d.e+]+|\d{1,15}(?:e\+?\d{1,16})?)\s*$/i.exec(t || ''); if (!m) return null;
+  const sc = parseTok(m[2]); if (!nGt(sc, 0)) return null;
+  const mode = Object.keys(MODE_LETTER).find(k => MODE_LETTER[k] === m[1].toUpperCase()); return { mode, score: sc }; }
+function chalCode(m, sc) { return MODE_LETTER[m] + '-' + scoreTok(sc); }
 function readChallengeURL() {
   try { const q = new URLSearchParams(location.search || location.hash.replace(/^#/, '?'));
-    const sc = parseInt(q.get('challenge'), 10), m = q.get('mode') || 'normal';
-    if (sc > 0 && MODE_LETTER[m]) challenge = { mode: m, score: sc }; else if (q.get('c')) challenge = parseCode(q.get('c')); } catch (e) {}
+    const sc = parseTok(q.get('challenge')), m = q.get('mode') || 'normal';
+    if (nGt(sc, 0) && MODE_LETTER[m]) challenge = { mode: m, score: sc }; else if (q.get('c')) challenge = parseCode(q.get('c')); } catch (e) {}
 }
 function modeLabel(m) { return MODE_NAME[m] || J('通常', 'Normal'); }
 function showChallenge() {
@@ -1161,7 +1230,7 @@ function showChallenge() {
 }
 function updateTarget() {
   const el = $('target'); const on = !!challenge && challenge.mode === mode && !tut; el.hidden = !on; if (!on) return;
-  const won = score > challenge.score;
+  const won = nGt(score, challenge.score);
   el.textContent = won ? J('挑戦クリア！', 'CHALLENGE BEATEN!') : J('目標 ', 'Target ') + fmtFit(challenge.score, 9);
   el.classList.toggle('won', won);
   if (won && !chalWon) { chalWon = true; pop(J('挑戦クリア！', 'CHALLENGE BEATEN!')); }
@@ -1171,7 +1240,7 @@ function shareText(sc) {
   return J('WIRE NINJA' + name + 'で ' + fmtFit(sc, 13) + ' pt 出した！これを超えられる？\n挑戦コード: ' + chalCode(mode, sc),
     'I scored ' + fmtFit(sc, 13) + ' pt in WIRE NINJA' + name + '! Can you beat it?\nChallenge code: ' + chalCode(mode, sc));
 }
-function shareURL(sc) { return GAME_URL + '?challenge=' + sc + '&mode=' + mode; }
+function shareURL(sc) { return GAME_URL + '?challenge=' + scoreTok(sc) + '&mode=' + mode; }
 let lastScore = 0;
 function shareMsg(t) { $('shareMsg').textContent = t || ''; }
 function selectShare() { const ta = $('shareText'); ta.focus(); ta.select(); try { ta.setSelectionRange(0, ta.value.length); } catch (e) {} }
@@ -1203,6 +1272,23 @@ $('startSuper').addEventListener('click', () => tryMode('super', J('超ドパガ
 $('startKyoku').addEventListener('click', () => tryMode('kyoku', J('極ドパガキ！！！', 'MAX DOPA!!!')));
 $('rulesBtn').addEventListener('click', () => { $('title').hidden = true; $('rules').hidden = false; });
 $('rulesClose').addEventListener('click', () => { $('rules').hidden = true; $('title').hidden = false; });
+// ---------- version & update history (newest first) ----------
+const VERSION = '1.1';
+const CHANGELOG = [
+  { v: '1.1', date: '2026-11-24',
+    ja: ['極ドパガキで得点が高すぎると「∞」になる不具合を修正', '10^300を超える得点も出せるように（巨大な数は 1.23×10⁴⁵⁶ や 10^(2.37×10²³) の形で表示）', '回転ジャンプの回転数の上限をなくした', '巨大な得点でもベスト記録・シェア・挑戦コードが使えるように', 'メニューにバージョンとアップデート履歴を追加'],
+    en: ['Fixed scores turning into "∞" in MAX DOPA', 'Scores can now go beyond 10^300 (huge numbers show as 1.23×10⁴⁵⁶ or 10^(2.37×10²³))', 'No more limit on spin-jump rotations', 'Best scores, sharing and challenge codes work with huge scores', 'Version and update history added to the menu'] },
+  { v: '1.0', date: '2026-11-24',
+    ja: ['最初のリリース：ワイヤーでビルの間を飛ぶネオンの夜の街', 'ジェット・巻き取り・屋上着地・橋くぐり・回転ジャンプ・バックフリップ・コンボ', '青・金・銀のアイテム', 'ドパガキ・超ドパガキ・極ドパガキモード（前のモード10回で解放）', 'チュートリアル（15ステップ）', '日本語／英語、結果シェアと挑戦コード'],
+    en: ['First release: swing between buildings in a neon night city', 'Jet, reel-in, rooftop landing, bridge dives, spin jumps, backflips and combos', 'Blue, gold and silver items', 'DOPA KID, SUPER DOPA and MAX DOPA modes (unlock after 10 runs of the previous mode)', 'Tutorial (15 steps)', 'Japanese / English, result sharing and challenge codes'] },
+];
+function showVersion() { $('verBtn').textContent = 'v' + VERSION + J(' ・ アップデート履歴', ' · Update history'); }
+function showNews() {
+  $('newsList').innerHTML = CHANGELOG.map(c => '<h2>v' + c.v + '<span>' + c.date + '</span></h2><ul>' + (isEN() ? c.en : c.ja).map(t => '<li>' + t + '</li>').join('') + '</ul>').join('');
+  $('title').hidden = true; $('news').hidden = false;
+}
+$('verBtn').addEventListener('click', showNews);
+$('newsClose').addEventListener('click', () => { $('news').hidden = true; $('title').hidden = false; });
 $('retry').addEventListener('click', () => startGame());
 $('toTitle').addEventListener('click', () => toTitle());
 
@@ -1374,7 +1460,7 @@ function step(dt) {
   if (hs < P.MINSPD) { vel.x += heading.x * (P.MINSPD - hs) * 2 * dt; vel.z += heading.z * (P.MINSPD - hs) * 2 * dt; }
   const prevY = pos.y, prevX = pos.x, prevZ = pos.z;
   pos.addScaledVector(vel, dt);
-  const hd = Math.hypot(vel.x, vel.z) * dt; pathDist += hd; score += hd * 10; stats.distPts += hd * 10;
+  const hd = Math.hypot(vel.x, vel.z) * dt; pathDist += hd; score = nAdd(score, hd * 10); stats.distPts += hd * 10;
   stats.maxSpeed = Math.max(stats.maxSpeed, vel.length());
   uT += dt; uCD -= dt; const uh = Math.hypot(vel.x, vel.z);
   if (state === 'play' && !onRoof && uh > 6 && uT - uSample >= 0.1) {
@@ -1383,7 +1469,13 @@ function step(dt) {
     if (uCD <= 0 && uHist.some(h => h.x * hx + h.z * hz < U_DOT)) { queueNear(1000, 'バックフリップ', true); uHist.length = 0; uCD = 2; }
     uHist.push({ t: uT, x: hx, z: hz });
   } else if (onRoof) uHist.length = 0;
-  if (flip) { flip.t += dt; flip.ang += flip.rate * dt; const n = Math.floor(flip.ang / (Math.PI * 2)); if (n > (flip.shown || 0)) { flip.shown = n; spinTick(n); } }
+  if (flip) {
+    flip.t += dt; flip.ang += Math.min(VIS_SPIN, Math.pow(10, flip.lgR)) * dt;
+    // true angle: a plain number while it is small, log10 form once it is huge
+    const add = flip.lgR + Math.log10(dt);
+    if (!isBig(flip.A) && add < 14 && flip.A < 1e15) flip.A += Math.pow(10, add); else flip.A = { lg: lgAdd(toLg(flip.A), add) };
+    const n = spinCount(flip.A); if (nGt(n, flip.shown || 0)) { flip.shown = n; spinTick(n); }
+  }
   for (const s of ['L', 'R']) {
     const r = ropes[s]; if (!r.on) continue;
     r.t = (r.t || 0) + dt;
@@ -1555,7 +1647,7 @@ function frame(now) {
 
   // HUD
   if (state === 'play') {
-    $('score').textContent = Math.floor(score).toLocaleString(); if (challenge) updateTarget();
+    $('score').textContent = fmtFit(nFloor(score), 13); if (challenge) updateTarget();
     $('dist').textContent = Math.floor(pathDist);
     $('spd').textContent = Math.round(sp * 3.6);
     $('warn').style.opacity = pos.y < 12 ? (Math.sin(now / 80) > 0 ? 1 : 0.3) : 0;
