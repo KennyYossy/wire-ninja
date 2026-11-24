@@ -228,6 +228,8 @@ body.no-combo #combo{display:none}
 .rulecard dl{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:0;font-size:13px}
 .rulecard dt{color:#fff;font-weight:700;white-space:nowrap}.rulecard dd{margin:0;color:var(--ink)}
 .rulecard .go{align-self:center;margin-top:8px}
+.ver{font-size:11px;color:var(--dim);margin-top:-6px}
+#newsList h2 span{font:500 12px var(--body);color:var(--dim);letter-spacing:0;margin-left:8px}
 
 #feed{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 150px);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;pointer-events:none}
 #feed div{font:700 17px var(--display);color:var(--amber);white-space:nowrap;text-shadow:0 0 8px rgba(255,181,58,.8);animation:feed 1.4s ease-out forwards}
@@ -315,6 +317,7 @@ body.no-combo #combo{display:none}
       </div>
     </div>
     <div class="codeRow"><button class="link" id="codeBtn" type="button" data-en="Enter a challenge code">挑戦コードを入力</button><span id="codeBox" hidden><input id="codeIn" type="text" inputmode="text" autocomplete="off" placeholder="D-12345" aria-label="challenge code"><button class="ghost" id="codeOk" type="button">OK</button></span></div>
+    <button class="link ver" id="verBtn" type="button"></button>
     <p class="hint" data-en="Left half = left wire / Right half = right wire">左半分＝左ワイヤー ／ 右半分＝右ワイヤー</p>
     <p class="warn" data-en="⚠ This game may contain flashing lights and intense motion. If you feel unwell, stop playing and rest right away.">⚠ このゲームには光の点滅や激しい動きが含まれる場合があります。気分が悪くなったらすぐにプレイをやめて休んでください。</p>
   </div>
@@ -349,6 +352,13 @@ body.no-combo #combo{display:none}
       <dt data-en="Combo">コンボ</dt><dd data-en="+5% per combo on every bonus">ボーナスごとに＋コンボ数×5%</dd>
     </dl>
     <button class="go" id="rulesClose" type="button" data-en="Close">閉じる</button>
+  </div>
+</div>
+<div class="overlay" id="news" hidden>
+  <div class="card rulecard">
+    <p class="sub" data-en="UPDATE HISTORY">アップデート履歴</p>
+    <div id="newsList"></div>
+    <button class="go" id="newsClose" type="button" data-en="Close">閉じる</button>
   </div>
 </div>
 <div id="tut" hidden>
@@ -827,6 +837,7 @@ function applyLang() {
   const jet = document.getElementById('jet'); if (jet) { if (!jet.dataset.jaLabel) jet.dataset.jaLabel = jet.getAttribute('aria-label'); jet.setAttribute('aria-label', lang === 'en' ? jet.dataset.enLabel : jet.dataset.jaLabel); }
   const b = document.getElementById('langBtn'); if (b) b.textContent = lang === 'en' ? '日本語' : 'EN';
   if (typeof showBests === 'function') showBests();
+  if (typeof showVersion === 'function') showVersion();
 }
 // ---------- big scores ----------
 // a score is a plain number while it stays below 1e300, and becomes { lg: log10(score) } beyond that,
@@ -999,7 +1010,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'ArrowLeft' || e.key === 'a') { keys.L = true; refreshHeld(); }
   if (e.key === 'ArrowRight' || e.key === 'd') { keys.R = true; refreshHeld(); }
   if ((e.key === ' ' || e.key === 'Enter') && state === 'tutready') tutBegin();
-  else if ((e.key === ' ' || e.key === 'Enter') && state !== 'play' && $('tutDone').hidden && $('rules').hidden) startGame();
+  else if ((e.key === ' ' || e.key === 'Enter') && state !== 'play' && $('tutDone').hidden && $('rules').hidden && $('news').hidden) startGame();
   const jk = { w: 'up', s: 'down', q: 'left', e: 'right' }[e.key]; if (jk) fireJet(jk);
 });
 window.addEventListener('keyup', e => {
@@ -1261,6 +1272,23 @@ $('startSuper').addEventListener('click', () => tryMode('super', J('超ドパガ
 $('startKyoku').addEventListener('click', () => tryMode('kyoku', J('極ドパガキ！！！', 'MAX DOPA!!!')));
 $('rulesBtn').addEventListener('click', () => { $('title').hidden = true; $('rules').hidden = false; });
 $('rulesClose').addEventListener('click', () => { $('rules').hidden = true; $('title').hidden = false; });
+// ---------- version & update history (newest first) ----------
+const VERSION = '1.1';
+const CHANGELOG = [
+  { v: '1.1', date: '2026-11-24',
+    ja: ['極ドパガキで得点が高すぎると「∞」になる不具合を修正', '10^300を超える得点も出せるように（巨大な数は 1.23×10⁴⁵⁶ や 10^(2.37×10²³) の形で表示）', '回転ジャンプの回転数の上限をなくした', '巨大な得点でもベスト記録・シェア・挑戦コードが使えるように', 'メニューにバージョンとアップデート履歴を追加'],
+    en: ['Fixed scores turning into "∞" in MAX DOPA', 'Scores can now go beyond 10^300 (huge numbers show as 1.23×10⁴⁵⁶ or 10^(2.37×10²³))', 'No more limit on spin-jump rotations', 'Best scores, sharing and challenge codes work with huge scores', 'Version and update history added to the menu'] },
+  { v: '1.0', date: '2026-11-24',
+    ja: ['最初のリリース：ワイヤーでビルの間を飛ぶネオンの夜の街', 'ジェット・巻き取り・屋上着地・橋くぐり・回転ジャンプ・バックフリップ・コンボ', '青・金・銀のアイテム', 'ドパガキ・超ドパガキ・極ドパガキモード（前のモード10回で解放）', 'チュートリアル（15ステップ）', '日本語／英語、結果シェアと挑戦コード'],
+    en: ['First release: swing between buildings in a neon night city', 'Jet, reel-in, rooftop landing, bridge dives, spin jumps, backflips and combos', 'Blue, gold and silver items', 'DOPA KID, SUPER DOPA and MAX DOPA modes (unlock after 10 runs of the previous mode)', 'Tutorial (15 steps)', 'Japanese / English, result sharing and challenge codes'] },
+];
+function showVersion() { $('verBtn').textContent = 'v' + VERSION + J(' ・ アップデート履歴', ' · Update history'); }
+function showNews() {
+  $('newsList').innerHTML = CHANGELOG.map(c => '<h2>v' + c.v + '<span>' + c.date + '</span></h2><ul>' + (isEN() ? c.en : c.ja).map(t => '<li>' + t + '</li>').join('') + '</ul>').join('');
+  $('title').hidden = true; $('news').hidden = false;
+}
+$('verBtn').addEventListener('click', showNews);
+$('newsClose').addEventListener('click', () => { $('news').hidden = true; $('title').hidden = false; });
 $('retry').addEventListener('click', () => startGame());
 $('toTitle').addEventListener('click', () => toTitle());
 
