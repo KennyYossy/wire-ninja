@@ -211,7 +211,15 @@ body.no-combo #combo{display:none}
 .go.locked,.go.dopa.locked{background:#2a2438;color:#8a8399;animation:none;box-shadow:none;-webkit-text-stroke:0;text-shadow:none}
 .go.locked small{letter-spacing:0;font-size:10px;white-space:nowrap}
 .bests .locked{filter:grayscale(1);opacity:.5;text-shadow:none;box-shadow:none;animation:none}
-.go.locked.shake,#codeIn.shake{animation:lockshake .3s}
+.go.locked.shake,#codeIn.shake,.stg.locked.shake{animation:lockshake .3s}
+.stages .stg{flex:1;font:700 14px var(--body);color:var(--ink);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.28);border-radius:14px;padding:8px 6px;line-height:1.25}
+.stg small{display:block;font:500 10px var(--body);color:var(--dim);letter-spacing:.04em;white-space:nowrap}
+.stg.sel{border-color:var(--cyan);background:rgba(53,242,255,.12);box-shadow:0 0 12px rgba(53,242,255,.35)}
+#stHarbor.sel{border-color:#ffb070;background:rgba(255,140,80,.16);box-shadow:0 0 12px rgba(255,140,80,.4)}
+.stg.locked{color:#8a8399;background:#221d30;border-color:rgba(255,255,255,.12);box-shadow:none}
+.stg:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+body.harbor .overlay#title{background:rgba(40,14,28,.55)}
+.unlockMsg{margin:0;font-weight:700;color:#ffc27a;text-align:center}
 @keyframes lockshake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .go.super{background:linear-gradient(90deg,#ffd23a,#ff3fb4,#9b6bff,#35f2ff);background-size:300% 100%;animation:superbg 2.4s linear infinite;box-shadow:0 0 26px rgba(255,210,58,.6)}
 @keyframes superbg{to{background-position:300% 0}}
@@ -303,11 +311,12 @@ body.no-combo #combo{display:none}
 <div class="overlay" id="title">
   <div class="card">
     <button id="langBtn" type="button" aria-label="Language">EN</button>
-    <p class="sub">NEON NIGHT SWING</p>
+    <p class="sub" id="subT">NEON NIGHT SWING</p>
     <h1 class="logo">WIRE<br>NINJA</h1>
     <div class="bests"><div><small data-en="BEST">ベスト</small><span class="sc" id="bestN"></span></div><div class="dopa"><small>ドパガキ</small><span class="sc" id="bestD"></span></div><div class="dopa super"><small>超ドパガキ</small><span class="sc" id="bestS"></span></div><div class="dopa kyoku"><small>極ドパガキ</small><span class="sc" id="bestK"></span></div></div>
     <div id="chal" hidden><p id="chalT"></p><div class="row2"><button class="go" id="chalGo" type="button" data-en="Accept">挑戦する</button><button class="ghost" id="chalX" type="button" data-en="Dismiss">やめる</button></div></div>
     <div class="modes">
+      <div class="row2 stages" role="group" aria-label="ステージ / Stage"><button class="stg sel" id="stCity" type="button">夜の街<small>ネオンの夜</small></button><button class="stg" id="stHarbor" type="button">夕暮れの港<small>クレーンと船</small></button></div>
       <button class="go" id="start" type="button" data-en="START">スタート</button>
       <div class="row2"><button class="go dopa" id="startDopa" type="button">ドパガキ<small>アイテム5倍</small></button><button class="go dopa super" id="startSuper" type="button">超ドパガキ<small>アイテム10倍</small></button></div>
       <button class="go dopa kyoku" id="startKyoku" type="button">極ドパガキ<small>金20倍・青銀10倍</small></button>
@@ -335,6 +344,13 @@ body.no-combo #combo{display:none}
       <li data-en="Drop onto a rooftop from above to run; you jump automatically at the edge">屋上に上から落ちると走って、端で自動ジャンプ</li>
       <li data-en="Hitting the ground, a building or a bridge is game over">地面・ビル・橋にぶつかったらゲームオーバー</li>
     </ul>
+    <h2 data-en="Sunset Harbor (unlocks after 10 runs)">夕暮れの港（10回遊ぶと解放）</h2>
+    <ul>
+      <li data-en="Pick the stage at the top of the title menu. Each stage keeps its own best scores">タイトルのメニュー上でステージを選べる。ベスト記録はステージごと</li>
+      <li data-en="<em>Cranes</em> slowly turn their arms. Your wire hooks onto the red light at the tip, and keeps moving with it"><em>クレーン</em>は腕がゆっくり回る。先端の赤いランプにワイヤーが刺さり、刺したまま一緒に動く</li>
+      <li data-en="Land on the green deck of a <em>ship</em> to rest. The ship keeps sailing, so plan your take-off">低く進む<em>船</em>の緑の甲板に着地すると休める。船は動き続けるので、飛び立つタイミングに注意</li>
+      <li data-en="Falling into the sea, or hitting a crane or a ship, is game over">海に落ちたり、クレーンや船にぶつかったらゲームオーバー</li>
+    </ul>
     <h2 data-en="Scoring">得点</h2>
     <dl>
       <dt data-en="Distance">移動</dt><dd data-en="1m = 10pt (any direction)">1m = 10pt（どの方向でも）</dd>
@@ -347,6 +363,7 @@ body.no-combo #combo{display:none}
       <dt data-en="Bridge dive">橋くぐり</dt><dd data-en="500–2000pt (lower bridges pay more)">500〜2000pt（低い橋ほど高い）</dd>
       <dt data-en="Landing">着地</dt><dd data-en="Land on a rooftop: 100pt">屋上に着地 100pt</dd>
       <dt data-en="Bridge landing">橋に着地</dt><dd data-en="Land on top of a green bridge: 1000pt">緑色の橋の上に着地 1000pt</dd>
+      <dt data-en="Ship landing">船に着地</dt><dd data-en="Land on a ship's deck (harbor): 500pt">港の船の甲板に着地 500pt</dd>
       <dt data-en="Spin jump">回転ジャンプ</dt><dd data-en="100→200→300→500→800→1300…">100→200→300→500→800→1300…</dd>
       <dt data-en="Backflip">バックフリップ</dt><dd data-en="Reverse your direction 180°: 1000pt">進む向きが180°逆に 1000pt</dd>
       <dt data-en="Combo">コンボ</dt><dd data-en="+5% per combo on every bonus">ボーナスごとに＋コンボ数×5%</dd>
@@ -392,6 +409,7 @@ body.no-combo #combo{display:none}
     <p class="record" id="record" hidden>NEW RECORD!</p>
     <p class="best" id="best"></p>
     <p class="chalRes" id="chalRes" hidden></p>
+    <p class="unlockMsg" id="unlockMsg" hidden></p>
     <dl class="breakdown" id="breakdown"></dl>
     <div class="stats" id="stats"></div>
     <div class="share"><button class="ghost" id="shareBtn" type="button" data-en="Share / challenge a friend">結果をシェア・友達に挑戦</button>
@@ -436,7 +454,7 @@ const SKY = 0x0b0716;
 scene.background = new THREE.Color(SKY);
 scene.fog = new THREE.Fog(SKY, 50, 300);
 const camera = new THREE.PerspectiveCamera(72, 1, 0.3, 400);
-scene.add(new THREE.HemisphereLight(0x6a5cff, 0x1a0820, 0.9));
+const hemi = new THREE.HemisphereLight(0x6a5cff, 0x1a0820, 0.9); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xff8fd0, 0.5); sun.position.set(-1, 2, 1); scene.add(sun);
 
 function resize() {
@@ -477,6 +495,52 @@ ground.rotation.x = -Math.PI / 2; scene.add(ground);
 const grid = new THREE.GridHelper(CELL * 40, 40, 0x5a2a8a, 0x2c1550);
 grid.position.y = 0.05; scene.add(grid);
 
+// ---------- stages ----------
+// 'city' = neon night city, 'harbor' = sunset harbor (unlocks after 10 runs): rotating cranes to hang from, ships to land on
+let world = 'city', wT = 0;                                // wT = world clock that drives the cranes and ships
+const mod4 = n => ((n % 4) + 4) % 4;
+const harborGrid = new THREE.GridHelper(CELL * 40, 40, 0xb0644e, 0x6a3a4a);
+harborGrid.position.y = 0.05; harborGrid.visible = false; scene.add(harborGrid);
+// sunset sky: a vertex-coloured dome around the camera plus a low sun (only drawn in the harbor)
+const skyDome = (() => {
+  const R = 360, g = new THREE.SphereGeometry(R, 20, 12), p = g.attributes.position, col = new Float32Array(p.count * 3);
+  const top = new THREE.Color(0x2a1648), mid = new THREE.Color(0xd8566a), low = new THREE.Color(0xffa34d), c = new THREE.Color();
+  for (let k = 0; k < p.count; k++) {
+    const y = p.getY(k) / R;
+    if (y > 0.22) c.copy(mid).lerp(top, Math.min(1, (y - 0.22) / 0.6)); else c.copy(low).lerp(mid, Math.max(0, (y + 0.02) / 0.24));
+    col[k * 3] = c.r; col[k * 3 + 1] = c.g; col[k * 3 + 2] = c.b;
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false }));
+  m.renderOrder = -2; m.visible = false; scene.add(m); return m;
+})();
+const sunDisc = new THREE.Mesh(new THREE.CircleGeometry(22, 28), new THREE.MeshBasicMaterial({ color: 0xffe2a0, fog: false, depthWrite: false }));
+const sunGlow = new THREE.Mesh(new THREE.CircleGeometry(46, 28), new THREE.MeshBasicMaterial({ color: 0xffb070, fog: false, depthWrite: false, transparent: true, opacity: 0.35 }));
+sunGlow.renderOrder = -1; sunDisc.renderOrder = -1; sunDisc.visible = sunGlow.visible = false; scene.add(sunGlow); scene.add(sunDisc);
+const SUN_DIR = new THREE.Vector3(-0.35, 0.07, -1).normalize();
+function placeSky() {
+  if (!skyDome.visible) return;
+  skyDome.position.copy(camera.position);
+  sunGlow.position.copy(camera.position).addScaledVector(SUN_DIR, 345); sunGlow.lookAt(camera.position);
+  sunDisc.position.copy(camera.position).addScaledVector(SUN_DIR, 340); sunDisc.lookAt(camera.position);
+}
+const WORLD_LOOK = {
+  city: { bg: SKY, fog: SKY, hemi: [0x6a5cff, 0x1a0820, 0.9], sun: [0xff8fd0, 0.5], sunPos: [-1, 2, 1], ground: 0x07040f, win: 0.9 },
+  harbor: { bg: 0xf0965a, fog: 0xee915e, hemi: [0xffd2b0, 0x4a2a48, 0.95], sun: [0xffa060, 0.9], sunPos: [-0.4, 0.5, -1], ground: 0x46283f, win: 0.3 },
+};
+function setWorld(w) {
+  if (w === world) return; world = w;
+  const L = WORLD_LOOK[w], hb = w === 'harbor';
+  scene.background.setHex(L.bg); scene.fog.color.setHex(L.fog);
+  hemi.color.setHex(L.hemi[0]); hemi.groundColor.setHex(L.hemi[1]); hemi.intensity = L.hemi[2];
+  sun.color.setHex(L.sun[0]); sun.intensity = L.sun[1]; sun.position.set(...L.sunPos);
+  ground.material.color.setHex(L.ground); towerMat.emissiveIntensity = L.win;
+  grid.visible = !hb; harborGrid.visible = hb; skyDome.visible = sunDisc.visible = sunGlow.visible = hb;
+  cellCache.clear(); bridgeCache.clear(); craneCache.clear(); shipMap.clear(); ships.length = 0; craneList.length = 0; builtCell = null;
+  for (const m of [craneParts, craneLamp, shipParts, shipTop, boxes, tanks, lanes]) m.count = 0;
+  bests = bestsBy[w];
+}
+
 // ---------- deterministic city ----------
 function rnd(i, j, k) {
   let h = Math.imul(i | 0, 374761393) ^ Math.imul(j | 0, 668265263) ^ Math.imul(k | 0, 1274126177);
@@ -488,6 +552,12 @@ const cellCache = new Map();
 function cell(i, j) {
   const key = i + ',' + j;
   if (cellCache.has(key)) return cellCache.get(key);
+  const b = world === 'harbor' ? harborCell(i, j) : cityCell(i, j);
+  cellCache.set(key, b);
+  if (cellCache.size > 6000) cellCache.clear();
+  return b;
+}
+function cityCell(i, j) {
   let b = null;
   const cx = i * CELL, cz = j * CELL;
   const d = Math.min(1, Math.hypot(cx, cz) / 2600);          // difficulty 0..1
@@ -509,9 +579,163 @@ function cell(i, j) {
     b = { x, z, w, d: dp, h, minx: x - w / 2, maxx: x + w / 2, minz: z - dp / 2, maxz: z + dp / 2,
           tint: 0.25 + rnd(i, j, 8) * 0.25, neon: NEON[(rnd(i, j, 9) * NEON.length) | 0] };
   }
-  cellCache.set(key, b);
-  if (cellCache.size > 6000) cellCache.clear();
   return b;
+}
+// harbor: low buildings only (no towers), in several shapes built from boxes and cylinders:
+// gabled warehouses, oil tanks, L-shaped offices, stepped buildings and container stacks. The avenues are water.
+// A cell returns its main part with every part (main included) in .parts; each part is its own solid / landable roof.
+const HB_WALL = [0x9a4a3a, 0x2f6f73, 0xc89a6a, 0x56607a, 0xb0582f, 0x7a5a8a], HB_BOX = [0xd8452e, 0x2f6fd0, 0x2fa85a, 0xf2b230, 0xe07a2a, 0x8a3fb0];
+const HB_TANK = [0xe8e0d0, 0xd8d0c0, 0xc0c8c8, 0xe0b080];
+const NO_PARTS = [], partsOf = b => !b ? NO_PARTS : b.parts || [b];
+function hPart(x, z, w, d, h, kind, col, extra) {
+  return Object.assign({ x, z, w, d, h, kind, col, minx: x - w / 2, maxx: x + w / 2, minz: z - d / 2, maxz: z + d / 2 }, extra);
+}
+function harborCell(i, j) {
+  if (mod4(i) === 0 || mod4(j) === 0) return null;
+  const cx = i * CELL, cz = j * CELL, dd = Math.min(1, Math.hypot(cx, cz) / 2600);
+  const R = (k) => rnd(i, j, k), pick = (pal, k) => pal[(R(k) * pal.length) | 0];
+  const start = j <= 2 && j >= -12 && Math.abs(i) === 1;          // walls along the first avenue (a little higher than the rest)
+  let parts;
+  if (start) parts = [hPart(cx + Math.sign(i) * 4, cz, 14, 24, 40 + R(4) * 6, 'bldg', pick(HB_WALL, 108))];
+  else {
+    if (R(101) > 0.99 - 0.15 * dd) return null;                    // open water, more of it far out
+    const kr = R(102), alongX = R(109) < 0.5, ox = (R(6) * 2 - 1) * 3, oz = (R(7) * 2 - 1) * 3, x0 = cx + ox, z0 = cz + oz;
+    const col = pick(HB_WALL, 108);
+    if (kr < 0.28) {                                              // warehouse with a gabled (stepped) roof
+      const w = 12 + R(103) * 3, len = 22 + R(104) * 6, h = 14 + R(105) * 8;
+      const W = alongX ? len : w, D = alongX ? w : len;
+      C.setHex(col).multiplyScalar(0.62); const roof = C.getHex();
+      parts = [hPart(x0, z0, W, D, h, 'shed', col),
+               hPart(x0, z0, alongX ? W - 1 : w * 0.45, alongX ? w * 0.45 : D - 1, h + 2.5 + R(106), 'shed', roof)];
+    } else if (kr < 0.46) {                                       // two or three round oil tanks
+      const n = R(103) < 0.5 ? 2 : 3, D = 9 + R(104) * 2.5, gap = D + 1.2, c0x = n === 3 ? cx : x0, c0z = n === 3 ? cz : z0;
+      parts = [];
+      for (let k = 0; k < n; k++) {
+        const t = (k - (n - 1) / 2) * gap, x = alongX ? c0x + t : c0x, z = alongX ? c0z : c0z + t, h = 18 + R(110 + k) * 12, side = D * 0.85;
+        parts.push(hPart(x, z, side, side, h, 'tank', pick(HB_TANK, 120 + k), { dia: D }));
+      }
+    } else if (kr < 0.62) {                                       // L-shaped office
+      const a = 10 + R(103) * 3, b = 20 + R(104) * 6, hA = 24 + R(105) * 12, wB = 10 + R(106) * 2, hB = 14 + R(107) * 8;
+      const sx = R(111) < 0.5 ? -1 : 1, sz = R(112) < 0.5 ? -1 : 1;
+      const ax = alongX ? x0 : x0 - sx * wB / 2, az = alongX ? z0 - sz * wB / 2 : z0;   // centre the whole L in the lot
+      const A = alongX ? hPart(ax, az, b, a, hA, 'bldg', col) : hPart(ax, az, a, b, hA, 'bldg', col);
+      const Bx = alongX ? ax + sx * (b / 2 - wB / 2) : ax + sx * (a / 2 + wB / 2), Bz = alongX ? az + sz * (a / 2 + wB / 2) : az + sz * (b / 2 - wB / 2);
+      parts = [A, hPart(Bx, Bz, wB, wB, hB, 'bldg', pick(HB_WALL, 113))];
+    } else if (kr < 0.78) {                                       // stepped building: wide low base + narrower upper block
+      const bw = 18 + R(103) * 4, bh = 14 + R(104) * 4, tw = 10 + R(105) * 3, th = 28 + R(106) * 12;
+      parts = [hPart(x0, z0, bw, bw, bh, 'bldg', col), hPart(x0 + (R(111) - 0.5) * (bw - tw) * 0.6, z0 + (R(112) - 0.5) * (bw - tw) * 0.6, tw, tw, th, 'bldg', pick(HB_WALL, 113))];
+    } else if (kr < 0.92) {                                       // container yard: rows of stacks of different heights
+      const n = 2 + ((R(103) * 3) | 0); parts = [];
+      for (let k = 0; k < n; k++) {
+        const t = (k - (n - 1) / 2) * 6.6, x = alongX ? x0 : x0 + t, z = alongX ? z0 + t : z0;
+        parts.push(hPart(x, z, alongX ? 12.5 : 5.6, alongX ? 5.6 : 12.5, 2.6 * (2 + ((R(110 + k) * 4) | 0)), 'box', pick(HB_BOX, 120 + k)));
+      }
+    } else return null;
+  }
+  // keep the main (tallest) part first: items sit on its roof
+  parts.sort((p, q) => q.h - p.h);
+  const main = parts[0]; main.parts = parts; return main;
+}
+
+// ---------- harbor cranes ----------
+// a crane stands on some avenues that run along z (ship lanes run along x, so they never meet); its jib turns slowly
+// and the wire hooks onto the jib tip, which keeps moving while you hang from it
+const craneCache = new Map(), craneList = [], MAX_CR = 70;
+function crane(i, j) {
+  if (world !== 'harbor' || mod4(j) === 0) return null;
+  const key = i + ',' + j;
+  if (craneCache.has(key)) return craneCache.get(key);
+  // on the avenues along z, and on empty lots of open water (quay cranes)
+  const spot = mod4(i) === 0 ? rnd(i, j, 110) < 0.92 && !(i === 0 && j > -14) : !cell(i, j) && Math.abs(i) > 1 && rnd(i, j, 118) < 0.9;
+  let c = null;
+  if (spot) {
+    const x = i * CELL + (rnd(i, j, 111) - 0.5) * 8, z = j * CELL + (rnd(i, j, 112) - 0.5) * 14, H = 50 + rnd(i, j, 113) * 14;   // the cranes are the tallest things in the harbor
+    c = { key, x, z, H, arm: 18 + rnd(i, j, 114) * 6, ph: rnd(i, j, 115) * Math.PI * 2, w: (0.12 + rnd(i, j, 116) * 0.14) * (rnd(i, j, 117) < 0.5 ? -1 : 1),
+          minx: x - 1.4, maxx: x + 1.4, minz: z - 1.4, maxz: z + 1.4, h: H + 2.4, isCrane: true };
+  }
+  craneCache.set(key, c);
+  if (craneCache.size > 6000) craneCache.clear();
+  return c;
+}
+const craneAng = c => c.ph + c.w * wT;
+function craneTip(c, out) { const a = craneAng(c); return out.set(c.x + Math.cos(a) * c.arm, c.H, c.z + Math.sin(a) * c.arm); }
+const craneParts = new THREE.InstancedMesh(unitBox, new THREE.MeshLambertMaterial({ color: 0xffffff }), MAX_CR * 5);
+const craneLamp = new THREE.InstancedMesh(unitBox, new THREE.MeshBasicMaterial({ color: 0xff4a3a }), MAX_CR);   // the hook point at the jib tip
+const CR_COL = new THREE.Color(0xf2a33a), CR_DARK = new THREE.Color(0x3a2630);
+
+// ---------- harbor ships ----------
+// ships sail along the avenues that run along x; land on the green deck to rest (it keeps moving, so plan the take-off)
+const SHIP_DECK = 6, SHIP_CAB = 12.5, SHIP_WALK = 4, MAX_SH = 60, shipMap = new Map(), ships = [];
+const SHIP_COL = [0x2b3a67, 0x8a2b2b, 0x1f5a4a, 0x3a3a46];
+function laneInfo(j) { return { dir: rnd(7, j, 120) < 0.5 ? -1 : 1, v: 6 + rnd(7, j, 121) * 6, L: 170 + rnd(7, j, 122) * 160, ph: rnd(7, j, 123) }; }
+function updateShips(px, pz) {
+  ships.length = 0;
+  if (world !== 'harbor') return;
+  const cj = Math.round(pz / CELL), R = VIEW_CELLS * CELL;
+  for (let j = cj - VIEW_CELLS; j <= cj + VIEW_CELLS; j++) {
+    if (mod4(j) !== 0) continue;
+    const ln = laneInfo(j), off = ln.ph * ln.L + ln.dir * ln.v * wT;
+    const k0 = Math.floor((px - R - off) / ln.L), k1 = Math.ceil((px + R - off) / ln.L);
+    for (let k = k0; k <= k1 && ships.length < MAX_SH; k++) {
+      if (rnd(k, j, 124) < 0.25) continue;                   // leave some gaps in the line
+      const key = j + ':' + k; let s = shipMap.get(key);
+      if (!s) {
+        s = { key, len: 34 + rnd(k, j, 125) * 12, wd: 9 + rnd(k, j, 126) * 2, col: SHIP_COL[(rnd(k, j, 128) * SHIP_COL.length) | 0], dir: ln.dir, vx: ln.dir * ln.v, zc: j * CELL + (rnd(k, j, 127) - 0.5) * 4 };
+        s.hull = { ship: s, isShip: true, h: SHIP_DECK, minz: s.zc - s.wd / 2, maxz: s.zc + s.wd / 2 };
+        s.cab = { ship: s, isShip: true, cab: true, h: SHIP_CAB, minz: s.zc - s.wd / 2 + 0.8, maxz: s.zc + s.wd / 2 - 0.8 };
+        shipMap.set(key, s);
+      }
+      const x = off + k * ln.L, cx = x - s.dir * (s.len / 2 - 5);   // bridge house at the stern
+      s.x = x; s.hull.minx = x - s.len / 2; s.hull.maxx = x + s.len / 2; s.cab.minx = cx - 4; s.cab.maxx = cx + 4; s.cabX = cx;
+      ships.push(s);
+    }
+  }
+  if (shipMap.size > 300) { const keep = new Set(ships); if (onRoof && onRoof.ship) keep.add(onRoof.ship); for (const [k, s] of shipMap) if (!keep.has(s)) shipMap.delete(k); }
+}
+const shipParts = new THREE.InstancedMesh(unitBox, new THREE.MeshLambertMaterial({ color: 0xffffff }), MAX_SH * 3);
+const shipTop = new THREE.InstancedMesh(unitBox, new THREE.MeshBasicMaterial({ color: 0x3dff7a }), MAX_SH * 2);   // green = you can land here
+const SH_WHITE = new THREE.Color(0xeee4d4), SH_FUNNEL = new THREE.Color(0xd8452e);
+// container stacks get their own corrugated look (no lit windows)
+const boxTex = (() => {
+  const c = document.createElement('canvas'); c.width = 64; c.height = 64; const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, 64, 64);
+  g.fillStyle = 'rgba(0,0,0,.18)'; for (let x = 0; x < 64; x += 8) g.fillRect(x, 0, 3, 64);
+  g.fillStyle = 'rgba(0,0,0,.45)'; for (let y = 0; y < 64; y += 16) g.fillRect(0, y, 64, 2);
+  const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; return t;
+})();
+const boxes = new THREE.InstancedMesh(unitBox, new THREE.MeshLambertMaterial({ color: 0xffffff, map: boxTex }), MAX_B);
+// the ship lanes are painted as blue water so you can see where ships run
+const lanes = new THREE.InstancedMesh(unitBox, new THREE.MeshBasicMaterial({ color: 0x3a86c8 }), 12);
+lanes.instanceMatrix.setUsage(THREE.DynamicDrawUsage); lanes.frustumCulled = false; lanes.count = 0; scene.add(lanes);
+const tanks = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.5, 0.5, 1, 16), new THREE.MeshLambertMaterial({ color: 0xffffff }), MAX_B);
+[craneParts, craneLamp, shipParts, shipTop, boxes, tanks].forEach(m => { m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); if (m !== craneLamp && m !== shipTop) m.setColorAt(0, new THREE.Color(0xffffff)); m.frustumCulled = false; m.count = 0; scene.add(m); });
+const RQ = new THREE.Quaternion(), YAXIS = new THREE.Vector3(0, 1, 0), cT = new THREE.Vector3();
+function drawMovers() {
+  if (world !== 'harbor') return;
+  let n = 0, l = 0;
+  for (const c of craneList) {
+    if (n + 5 > MAX_CR * 5) break;
+    const a = craneAng(c), ca = Math.cos(a), sa = Math.sin(a); RQ.setFromAxisAngle(YAXIS, -a);
+    M.compose(T.set(c.x, c.H / 2, c.z), Q.identity(), S.set(2.4, c.H, 2.4)); craneParts.setMatrixAt(n, M); craneParts.setColorAt(n++, CR_COL);
+    const mid = (c.arm - 9) / 2;
+    M.compose(T.set(c.x + ca * mid, c.H + 0.6, c.z + sa * mid), RQ, S.set(c.arm + 9, 1.3, 1.6)); craneParts.setMatrixAt(n, M); craneParts.setColorAt(n++, CR_COL);
+    M.compose(T.set(c.x, c.H + 1.5, c.z), RQ, S.set(3.2, 2.4, 3)); craneParts.setMatrixAt(n, M); craneParts.setColorAt(n++, CR_COL);
+    M.compose(T.set(c.x - ca * 7.5, c.H - 0.6, c.z - sa * 7.5), RQ, S.set(3, 2.2, 2.6)); craneParts.setMatrixAt(n, M); craneParts.setColorAt(n++, CR_DARK);
+    M.compose(T.set(c.x + ca * c.arm, c.H - 7, c.z + sa * c.arm), Q, S.set(0.18, 13, 0.18)); craneParts.setMatrixAt(n, M); craneParts.setColorAt(n++, CR_DARK);
+    M.compose(T.set(c.x + ca * c.arm, c.H + 0.6, c.z + sa * c.arm), RQ, S.set(2.2, 2.2, 2.4)); craneLamp.setMatrixAt(l++, M);
+  }
+  craneParts.count = n; craneLamp.count = l;
+  let p = 0, t = 0;
+  for (const s of ships) {
+    C.setHex(s.col);
+    M.compose(T.set(s.x, SHIP_DECK / 2 - 0.5, s.zc), Q.identity(), S.set(s.len, SHIP_DECK + 1, s.wd)); shipParts.setMatrixAt(p, M); shipParts.setColorAt(p++, C);
+    M.compose(T.set(s.cabX, (SHIP_DECK + SHIP_CAB) / 2, s.zc), Q, S.set(8, SHIP_CAB - SHIP_DECK, s.wd - 1.6)); shipParts.setMatrixAt(p, M); shipParts.setColorAt(p++, SH_WHITE);
+    M.compose(T.set(s.cabX - s.dir * 1.5, SHIP_CAB + 1.6, s.zc), Q, S.set(2, 3.2, 2)); shipParts.setMatrixAt(p, M); shipParts.setColorAt(p++, SH_FUNNEL);
+    M.compose(T.set(s.x + s.dir * 4, SHIP_DECK + 0.08, s.zc), Q, S.set(s.len - 10.4, 0.16, s.wd - 0.4)); shipTop.setMatrixAt(t++, M);
+    M.compose(T.set(s.cabX, SHIP_CAB + 0.08, s.zc), Q, S.set(7.8, 0.16, s.wd - 1.8)); shipTop.setMatrixAt(t++, M);
+  }
+  shipParts.count = p; shipTop.count = t;
+  for (const m of [craneParts, craneLamp, shipParts, shipTop]) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; }
 }
 
 // ---------- bridges ----------
@@ -526,6 +750,7 @@ function bridgeValue(y0) {
   return { pts: Math.round((500 + 1500 * t) / 100) * 100, col };
 }
 function bridge(i, j) {
+  if (world === 'harbor') return null;
   if (tut && !feat('bridge')) return null;                 // tutorial: no bridges before their lesson
   const dense = tut && TUT[tut.i].unlock === 'bridge';     // ...and plenty during it
   const key = (dense ? 't' : '') + i + ',' + j;
@@ -582,20 +807,37 @@ function rebuildCity(px, pz) {
   const ci = Math.round(px / CELL), cj = Math.round(pz / CELL);
   const key = ci + ',' + cj;
   if (key === builtCell) return; builtCell = key;
-  let n = 0, r = 0;
+  let n = 0, r = 0, nb0 = 0, nt = 0;
+  const hb = world === 'harbor'; craneList.length = 0;
   for (let i = ci - VIEW_CELLS; i <= ci + VIEW_CELLS; i++) for (let j = cj - VIEW_CELLS; j <= cj + VIEW_CELLS; j++) {
-    const b = cell(i, j); if (!b || n >= MAX_B) continue;
+    if (hb) { const c = crane(i, j); if (c && craneList.length < MAX_CR) craneList.push(c); }
+    const b0 = cell(i, j); if (!b0) continue;
+    for (const b of partsOf(b0)) {
+    if (n >= MAX_B || nb0 >= MAX_B || nt >= MAX_B) break;
+    if (b.kind === 'box' || b.kind === 'shed') {              // harbor: containers and warehouses (corrugated, no windows)
+      M.compose(T.set(b.x, b.h / 2, b.z), Q.identity(), S.set(b.w, b.h, b.d)); boxes.setMatrixAt(nb0, M); C.setHex(b.col); boxes.setColorAt(nb0++, C); continue;
+    }
+    if (b.kind === 'tank') {                                  // harbor: round oil tank (its solid box sits inside the circle)
+      M.compose(T.set(b.x, b.h / 2, b.z), Q.identity(), S.set(b.dia, b.h, b.dia)); tanks.setMatrixAt(nt, M); C.setHex(b.col); tanks.setColorAt(nt++, C); continue;
+    }
     M.compose(T.set(b.x, b.h / 2, b.z), Q.identity(), S.set(b.w, b.h, b.d)); towers.setMatrixAt(n, M);
-    C.setRGB(b.tint * 0.55, b.tint * 0.5, b.tint); towers.setColorAt(n, C);
+    if (hb) C.setHex(b.col); else C.setRGB(b.tint * 0.55, b.tint * 0.5, b.tint); towers.setColorAt(n, C);
     M.compose(T.set(b.x, b.h + 0.3, b.z), Q, S.set(b.w + 0.6, 0.6, b.d + 0.6)); caps.setMatrixAt(n, M);
-    C.setHex(b.neon); caps.setColorAt(n, C);
-    // two glowing corner ribs
-    M.compose(T.set(b.minx, b.h / 2, b.minz), Q, S.set(0.5, b.h, 0.5)); ribs.setMatrixAt(r, M); ribs.setColorAt(r++, C);
-    M.compose(T.set(b.maxx, b.h / 2, b.maxz), Q, S.set(0.5, b.h, 0.5)); ribs.setMatrixAt(r, M); ribs.setColorAt(r++, C);
+    if (hb) C.setHex(b.col).multiplyScalar(0.5); else C.setHex(b.neon); caps.setColorAt(n, C);
+    if (!hb) {                                                // two glowing corner ribs (neon city only)
+      M.compose(T.set(b.minx, b.h / 2, b.minz), Q, S.set(0.5, b.h, 0.5)); ribs.setMatrixAt(r, M); ribs.setColorAt(r++, C);
+      M.compose(T.set(b.maxx, b.h / 2, b.maxz), Q, S.set(0.5, b.h, 0.5)); ribs.setMatrixAt(r, M); ribs.setColorAt(r++, C);
+    }
     n++;
+    }
   }
-  towers.count = n; caps.count = n; ribs.count = r;
-  [towers, caps, ribs].forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
+  let nl = 0;
+  if (hb) for (let j = cj - VIEW_CELLS; j <= cj + VIEW_CELLS && nl < 12; j++) if (mod4(j) === 0) {
+    M.compose(T.set(ci * CELL, 0.03, j * CELL), Q.identity(), S.set((VIEW_CELLS * 2 + 4) * CELL, 0.04, CELL - 5)); lanes.setMatrixAt(nl++, M);
+  }
+  lanes.count = nl; lanes.instanceMatrix.needsUpdate = true;
+  towers.count = n; caps.count = n; ribs.count = r; boxes.count = nb0; tanks.count = nt;
+  [towers, caps, ribs, boxes, tanks].forEach(m => { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; });
   let nb = 0, ng = 0;
   for (let i = ci - VIEW_CELLS; i <= ci + VIEW_CELLS && nb < MAX_BR; i++) for (let j = cj - VIEW_CELLS; j <= cj + VIEW_CELLS && nb < MAX_BR; j++) {
     const br = bridge(i, j); if (!br) continue;
@@ -612,7 +854,7 @@ function rebuildCity(px, pz) {
   }
   bridgeDeck.count = nb; bridgeGlow.count = ng; bridgeTop.count = nb; bridgeTop.instanceMatrix.needsUpdate = true;
   bridgeDeck.instanceMatrix.needsUpdate = true; if (bridgeDeck.instanceColor) bridgeDeck.instanceColor.needsUpdate = true; bridgeGlow.instanceMatrix.needsUpdate = true; if (bridgeGlow.instanceColor) bridgeGlow.instanceColor.needsUpdate = true;
-  grid.position.x = (ci + 0.5) * CELL; grid.position.z = (cj + 0.5) * CELL;
+  grid.position.x = harborGrid.position.x = (ci + 0.5) * CELL; grid.position.z = harborGrid.position.z = (cj + 0.5) * CELL;
   placeItems(ci, cj);
   ground.position.x = px; ground.position.z = pz;
 }
@@ -667,7 +909,7 @@ function itemAt(i, j, slot) {
   const k = slot * 20;                                     // each extra slot in a cell uses its own random stream
   if (!tk || !ave || rnd(i, j, 11 + k) > rate - slot || (Math.abs(i) <= 1 && j > -2)) return null;
   return { key: i + ',' + j + (slot ? '#' + slot : ''), x: i * CELL + (rnd(i, j, 12 + k) - 0.5) * 16, z: j * CELL + (rnd(i, j, 13 + k) - 0.5) * 16,
-           y: 26 + rnd(i, j, 14 + k) * 36, kind: tk !== true ? tk : modeKind(rnd(i, j, 15 + k)) };
+           y: (world === 'harbor' ? 16 + rnd(i, j, 14 + k) * 28 : 26 + rnd(i, j, 14 + k) * 36), kind: tk !== true ? tk : modeKind(rnd(i, j, 15 + k)) };
 }
 // 30% of rooftops carry an item too (same colour mix)
 function roofItemAt(i, j) {
@@ -814,22 +1056,26 @@ function marker(color) {
   m.visible = false; scene.add(m); return m;
 }
 const COLORS = { L: 0x35f2ff, R: 0xff3fb4 };
-const ropes = { L: { reelReq: 0, mesh: rope(COLORS.L), anchor: new THREE.Vector3(), pivot: new THREE.Vector3(), len: 0, on: false, mark: marker(COLORS.L), cand: null },
-                R: { reelReq: 0, mesh: rope(COLORS.R), anchor: new THREE.Vector3(), pivot: new THREE.Vector3(), len: 0, on: false, mark: marker(COLORS.R), cand: null } };
+const ropes = { L: { reelReq: 0, mesh: rope(COLORS.L), anchor: new THREE.Vector3(), pivot: new THREE.Vector3(), len: 0, on: false, mark: marker(COLORS.L), cand: null, crane: null, cOff: new THREE.Vector3() },
+                R: { reelReq: 0, mesh: rope(COLORS.R), anchor: new THREE.Vector3(), pivot: new THREE.Vector3(), len: 0, on: false, mark: marker(COLORS.R), cand: null, crane: null, cOff: new THREE.Vector3() } };
 const UP = new THREE.Vector3(0, 1, 0);
 
 // ---------- state ----------
 const pos = new THREE.Vector3(), vel = new THREE.Vector3(), heading = new THREE.Vector3(0, 0, -1), camHead = new THREE.Vector3(0, 0, -1);
 let state = 'title', best = 0, maxDist = 0, time = 0, lastSide = null;
 let mode = 'normal';                                      // 'normal' | 'dopa' (items x5) | 'super' (x10), each keeps its own best
-const BEST_KEY = { normal: 'wc-best-pt', dopa: 'wc-best-pt-dopa', super: 'wc-best-pt-super', kyoku: 'wc-best-pt-kyoku' }, bests = { normal: 0, dopa: 0, super: 0, kyoku: 0 };
+const BEST_KEY = { normal: 'wc-best-pt', dopa: 'wc-best-pt-dopa', super: 'wc-best-pt-super', kyoku: 'wc-best-pt-kyoku' };
+const bestKey = (w, m) => BEST_KEY[m] + (w === 'harbor' ? '-harbor' : '');   // each stage keeps its own bests
+const bestsBy = { city: { normal: 0, dopa: 0, super: 0, kyoku: 0 }, harbor: { normal: 0, dopa: 0, super: 0, kyoku: 0 } };
+let bests = bestsBy.city, lastShip = null;
 let lang = 'ja'; try { lang = localStorage.getItem('wc-lang') || ((navigator.language || '').toLowerCase().startsWith('ja') ? 'ja' : 'en'); } catch (e) { lang = (navigator.language || '').toLowerCase().startsWith('ja') ? 'ja' : 'en'; }
 const isEN = () => lang === 'en', J = (ja, en) => lang === 'en' ? en : ja;
 const MODE_NAME_JA = { normal: '', dopa: 'ドパガキ', super: '超ドパガキ', kyoku: '極ドパガキ' };
 const MODE_NAME_EN = { normal: '', dopa: 'DOPA KID', super: 'SUPER DOPA', kyoku: 'MAX DOPA' };
 const MODE_NAME = new Proxy({}, { get: (o, k) => (lang === 'en' ? MODE_NAME_EN : MODE_NAME_JA)[k] });
-const LABEL_EN = { 'アイテム': 'ITEM', '橋くぐり': 'BRIDGE DIVE', '橋に着地': 'BRIDGE LANDING', 'すれすれ': 'CLOSE CALL', 'Wスレスレ': 'DOUBLE CLOSE CALL', '地面すれすれ': 'GROUND SKIM', '着地': 'LANDING', '回転ジャンプ': 'SPIN JUMP', 'バックフリップ': 'BACKFLIP',
-  '地面に落下': 'Hit the ground', 'ビルに激突': 'Crashed into a building', '橋に激突': 'Crashed into a bridge' };
+const STAGE_NAME = new Proxy({}, { get: (o, k) => k === 'harbor' ? J('夕暮れの港', 'SUNSET HARBOR') : J('夜の街', 'NIGHT CITY') });
+const LABEL_EN = { 'アイテム': 'ITEM', '橋くぐり': 'BRIDGE DIVE', '橋に着地': 'BRIDGE LANDING', 'すれすれ': 'CLOSE CALL', 'Wスレスレ': 'DOUBLE CLOSE CALL', '地面すれすれ': 'GROUND SKIM', '着地': 'LANDING', '船に着地': 'SHIP LANDING', '回転ジャンプ': 'SPIN JUMP', 'バックフリップ': 'BACKFLIP',
+  '地面に落下': 'Hit the ground', 'ビルに激突': 'Crashed into a building', '橋に激突': 'Crashed into a bridge', '海に落下': 'Fell into the sea', 'クレーンに激突': 'Crashed into a crane', '船に激突': 'Crashed into a ship' };
 function labelT(l) { if (lang !== 'en') return l; const m = /^(\d+)回転ジャンプ$/.exec(l); return m ? m[1] + 'x SPIN JUMP' : (LABEL_EN[l] || l); }
 function applyLang() {
   document.documentElement.lang = lang;
@@ -862,7 +1108,7 @@ const nFloor = v => isBig(v) ? v : Math.floor(v);
 // best scores: plain digits, or "lg:<log10>" once they pass 1e300; an old Infinity/NaN best (overflow bug) is reset to 0
 const saveNum = v => isBig(v) ? 'lg:' + v.lg : String(v);
 function loadNum(t) { t = String(t || ''); if (t.startsWith('lg:')) { const lg = +t.slice(3); return lg > 0 && isFinite(lg) ? fromLg(lg) : 0; } const v = +t; return v > 0 && isFinite(v) ? v : 0; }
-try { for (const m in BEST_KEY) { const raw = localStorage.getItem(BEST_KEY[m]); bests[m] = loadNum(raw); if (raw && !bests[m]) localStorage.removeItem(BEST_KEY[m]); } } catch (e) {}
+try { for (const w in bestsBy) for (const m in BEST_KEY) { const k = bestKey(w, m), raw = localStorage.getItem(k); bestsBy[w][m] = loadNum(raw); if (raw && !bestsBy[w][m]) localStorage.removeItem(k); } } catch (e) {}
 best = bests.normal;
 // score formats for the high-score displays: exponent (1.23e+6) with full kanji numerals underneath
 // 1.23×10⁸ style (superscript digits so it works in plain text too)
@@ -893,16 +1139,16 @@ function kanjiNum(n) {
   return out;
 }
 function setScore(el, n) { el.innerHTML = '<b>' + fmtFit(n, 7) + '</b>'; }
-function showBests() { if (typeof showLocks === 'function') showLocks(); if (typeof showChallenge === 'function') showChallenge(); setScore($('bestN'), bests.normal); setScore($('bestD'), bests.dopa); setScore($('bestS'), bests.super); setScore($('bestK'), bests.kyoku); }
+function showBests() { if (typeof showStages === 'function') showStages(); if (typeof showLocks === 'function') showLocks(); if (typeof showChallenge === 'function') showChallenge(); setScore($('bestN'), bests.normal); setScore($('bestD'), bests.dopa); setScore($('bestS'), bests.super); setScore($('bestK'), bests.kyoku); }
 const held = { L: false, R: false };
 
 function reset() {
-  pos.set(0, 50, 8); vel.set(0, 7, -24); heading.set(0, 0, -1); camHead.copy(heading);
-  maxDist = 0; time = 0; wL = wR = -9; wCD = 0; groundArmed = true; uHist.length = 0; uT = uSample = uCD = 0; pendingNear.length = 0; onRoof = null; flip = null; score = 0; pathDist = 0; nearCD = 0; lastNear = null;
+  pos.set(0, world === 'harbor' ? 38 : 50, 8); vel.set(0, 7, -24);   // the harbor is lower, so start lower heading.set(0, 0, -1); camHead.copy(heading);
+  maxDist = 0; time = 0; wT = 0; lastShip = null; wL = wR = -9; wCD = 0; groundArmed = true; uHist.length = 0; uT = uSample = uCD = 0; pendingNear.length = 0; onRoof = null; flip = null; score = 0; pathDist = 0; nearCD = 0; lastNear = null;
   body.rotation.x = 0; collected.clear(); $('feed').textContent = ''; $('spin').hidden = true; spinHide = 0; shakeT = 0; jetCD = 0; jetT = 0; spinMul = 1; spinLg = 0; accelLg = 0; $('mul').hidden = true; combo = 0; comboT = 0; comboMax = 10; comboTime = 3; accelMul = 1; jetMul = 1; jetMax = JET_CD; resetStats();
   for (const s of ['L', 'R']) { ropes[s].reelT = 0; ropes[s].snapped = false; ropes[s].t = 0; }
-  for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; }
-  builtCell = null; rebuildCity(pos.x, pos.z);
+  for (const s of ['L', 'R']) { ropes[s].on = false; ropes[s].mesh.visible = false; ropes[s].crane = null; }
+  builtCell = null; rebuildCity(pos.x, pos.z); updateShips(pos.x, pos.z);
   camera.position.copy(pos).addScaledVector(heading, -11).add(T.set(0, 4.5, 0));
 }
 
@@ -914,8 +1160,18 @@ function findAnchor(side) {
   const px = pos.x + heading.x * AIM_FWD + rightV.x * sgn * 6, pz = pos.z + heading.z * AIM_FWD + rightV.z * sgn * 6;
   const ci = Math.round(pos.x / CELL), cj = Math.round(pos.z / CELL), rad = Math.ceil(P.RANGE / CELL) + 1;
   let bestS = Infinity, bestA = null;
+  const hbA = world === 'harbor', aimD = hbA ? 38 : 50;      // the harbor is lower, so it prefers a shorter wire
   for (let i = ci - rad; i <= ci + rad; i++) for (let j = cj - rad; j <= cj + rad; j++) {
-    const b = cell(i, j); if (!b) continue;
+    const c = crane(i, j);
+    if (c) {                                                  // harbor: the tip of a crane's jib (slightly preferred)
+      craneTip(c, cT); const rx = cT.x - pos.x, ry = cT.y - pos.y, rz = cT.z - pos.z, dist = Math.hypot(rx, ry, rz);
+      const fwd = rx * heading.x + rz * heading.z, lat = (rx * rightV.x + rz * rightV.z) * sgn;
+      if (ry >= 3 && dist >= 9 && dist <= P.RANGE && fwd >= 2 && lat >= 5 + fwd * 0.2) {
+        const score = Math.abs(dist - aimD) - fwd * 0.4 + lat * 0.3 - 6 + (cT.y - dist < 4 ? 20 : 0);
+        if (score < bestS) { bestS = score; bestA = cT.clone(); bestA.crane = c; }
+      }
+    }
+    for (const b of partsOf(cell(i, j))) {
     const ay = Math.min(b.h - 0.5, pos.y + AIM_UP);
     if (ay < pos.y + 3) continue;
     // nearest point on footprint boundary to the aim point
@@ -931,8 +1187,9 @@ function findAnchor(side) {
     if (dist < 9 || dist > P.RANGE) continue;
     const fwd = rx * heading.x + rz * heading.z, lat = (rx * rightV.x + rz * rightV.z) * sgn;
     if (fwd < 2 || lat < 5 + fwd * 0.2) continue;
-    const score = Math.abs(dist - 50) - fwd * 0.4 + lat * 0.3;
+    const score = Math.abs(dist - aimD) - fwd * 0.4 + lat * 0.3 + (hbA && ay - dist < 4 ? 20 : 0);   // harbor: avoid swings that would dip into the sea
     if (score < bestS) { bestS = score; bestA = tmp.set(ax, ay, az).clone(); }
+    }
   }
   return bestA;
 }
@@ -941,10 +1198,11 @@ function attach(side) {
   const r = ropes[side]; if (r.snapped) return false;      // after a snap, lift the finger before firing again
   const a = r.cand || findAnchor(side);
   if (!a) return false;
-  r.anchor.copy(a);
+  r.anchor.copy(a); r.crane = a.crane || null;
+  if (r.crane) craneTip(r.crane, r.anchor);                // the jib kept turning since the aim was taken
   rightV.set(-heading.z, 0, heading.x);
-  const lat = (a.x - pos.x) * rightV.x + (a.z - pos.z) * rightV.z;
-  r.pivot.copy(a).addScaledVector(rightV, -lat * (1 - P.SIDE));
+  const lat = (r.anchor.x - pos.x) * rightV.x + (r.anchor.z - pos.z) * rightV.z;
+  r.pivot.copy(r.anchor).addScaledVector(rightV, -lat * (1 - P.SIDE)); r.cOff.subVectors(r.pivot, r.anchor);
   r.len = pos.distanceTo(r.pivot); r.len0 = r.len; r.on = true; r.mesh.visible = true; r.reelReq = 0; r.t = 0;
   tutEvent('attach', { side });
   endFlip();
@@ -1127,7 +1385,7 @@ function endFlip() {
 function pop(text) { $('pop').textContent = text; $('pop').style.opacity = 1; popT = 0.7; }
 function startGame(m) {
   if (typeof m === 'string') mode = m;
-  tutEnd();
+  tutEnd(); setWorld(stage);
   $('title').hidden = true; $('over').hidden = true; reset(); state = 'play'; chalWon = false; $('target').hidden = true; $('sharePanel').hidden = true;
   touches.clear(); held.L = held.R = false; keys.L = keys.R = false; mouseSide = null;
   $('padL').classList.remove('on'); $('padR').classList.remove('on');
@@ -1141,20 +1399,21 @@ function gameOver(why) {
   if (flip && flip.shown) { $('spinPts').textContent = J('失敗…', 'MISSED…'); $('spin').classList.add('fail'); spinHide = 0.9; }
   flip = null; body.rotation.x = 0;
   burst(pos, 80, 12); shakeT = 0.4; flashScreen('rgba(255,40,80,.3)');
-  countPlay();
+  const hadHarbor = stageOpen('harbor'); countPlay();
+  { const um = $('unlockMsg'), now = !hadHarbor && stageOpen('harbor'); um.hidden = !now; if (now) um.textContent = J('新ステージ「夕暮れの港」が解放された！タイトルで選べます', 'New stage unlocked: SUNSET HARBOR! Pick it on the title screen'); }
   best = bests[mode];
   const d = nFloor(score), prevBest = best, isNew = nGt(d, prevBest) && nGt(d, 0);
-  if (isNew) { best = bests[mode] = d; try { localStorage.setItem(BEST_KEY[mode], saveNum(best)); } catch (e) {} }
-  $('overMode').textContent = MODE_NAME[mode] ? MODE_NAME[mode] + ' ・ ' : '';
+  if (isNew) { best = bests[mode] = d; try { localStorage.setItem(bestKey(world, mode), saveNum(best)); } catch (e) {} }
+  $('overMode').textContent = (world === 'harbor' ? STAGE_NAME.harbor + ' ・ ' : '') + (MODE_NAME[mode] ? MODE_NAME[mode] + ' ・ ' : '');
   $('why').textContent = labelT(why);
   $('record').hidden = !isNew; lastScore = d; $('sharePanel').hidden = true;
-  { const cr = $('chalRes'), on = !!challenge && challenge.mode === mode; cr.hidden = !on;
+  { const cr = $('chalRes'), on = chalHere(); cr.hidden = !on;
     if (on) { const w = nGt(d, challenge.score); cr.classList.toggle('won', w);
       cr.textContent = w ? J('挑戦成功！ ' + fmtFit(challenge.score, 13) + ' pt を ' + fmtFit(nSub(d, challenge.score), 13) + ' pt 上回った', 'Challenge won! Beat ' + fmtFit(challenge.score, 13) + ' pt by ' + fmtFit(nSub(d, challenge.score), 13) + ' pt')
                          : J('挑戦失敗… 目標 ' + fmtFit(challenge.score, 13) + ' pt まであと ' + fmtFit(nAdd(nSub(challenge.score, d), 1), 13) + ' pt', 'Challenge lost… ' + fmtFit(nAdd(nSub(challenge.score, d), 1), 13) + ' pt short of ' + fmtFit(challenge.score, 13) + ' pt'); } }
   $('best').innerHTML = isNew ? (nGt(prevBest, 0) ? J('前のベスト ', 'Previous best ') + fmtFit(prevBest, 13) + ' pt' : J('初めての記録', 'First record')) : J('ベスト ', 'Best ') + fmtFit(best, 13) + J(' pt（あと ', ' pt (') + fmtFit(nSub(best, d), 13) + J(' pt）', ' pt to go)');
   // breakdown
-  const order = ['アイテム', '橋くぐり', '橋に着地', 'すれすれ', 'Wスレスレ', '地面すれすれ', '着地', '回転ジャンプ', 'バックフリップ'];
+  const order = ['アイテム', '橋くぐり', '橋に着地', '船に着地', 'すれすれ', 'Wスレスレ', '地面すれすれ', '着地', '回転ジャンプ', 'バックフリップ'];
   const rows = [[J('移動距離 ', 'Distance ') + Math.floor(pathDist) + ' m', '', Math.round(stats.distPts)]];
   for (const k of order) if (stats.cat[k]) rows.push([labelT(k), '×' + stats.cat[k].n, stats.cat[k].pts]);
   const esc = t => String(t).replace(/[&<>]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[ch]);
@@ -1192,6 +1451,32 @@ function showLocks() {
     el.querySelector('small').textContent = ok ? sub : (isEN() ? '🔒 ' + (UNLOCK_RUNS - plays[prev]) + ' more ' + (unlocked(prev) ? (MODE_NAME[prev] || 'Normal') : '？？？') + ' runs' : '🔒 ' + (unlocked(prev) ? (MODE_NAME[prev] || '通常') : '？？？') + 'をあと' + (UNLOCK_RUNS - plays[prev]) + '回');
   }
 }
+// ---------- stage select ----------
+// the sunset harbor unlocks after 10 runs in total (any mode); the chosen stage is remembered
+const STAGE_RUNS = 10;
+const totalPlays = () => Object.values(plays).reduce((a, b) => a + (+b || 0), 0);
+const stageOpen = st => st !== 'harbor' || !!gifted.harbor || totalPlays() >= STAGE_RUNS;
+let stage = 'city'; try { if (localStorage.getItem('wc-stage') === 'harbor') stage = 'harbor'; } catch (e) {}
+if (!stageOpen(stage)) stage = 'city';
+function giftStage(st) { if (stageOpen(st)) return; gifted[st] = 1; try { localStorage.setItem('wc-gift', JSON.stringify(gifted)); } catch (e) {} setTimeout(() => pop(J(STAGE_NAME[st] + ' 解放！', STAGE_NAME[st] + ' UNLOCKED!')), 300); }
+function pickStage(st) {
+  if (!stageOpen(st)) { retrigger($('stHarbor'), 'shake'); return; }
+  stage = st; try { localStorage.setItem('wc-stage', st); } catch (e) {}
+  if (state === 'title') { setWorld(st); reset(); }
+  showBests();
+}
+function showStages() {
+  const ok = stageOpen('harbor'), h = $('stHarbor'), c = $('stCity'), left = Math.max(1, STAGE_RUNS - totalPlays());
+  c.classList.toggle('sel', stage === 'city'); h.classList.toggle('sel', stage === 'harbor'); h.classList.toggle('locked', !ok); h.setAttribute('aria-disabled', String(!ok));
+  c.setAttribute('aria-pressed', String(stage === 'city')); h.setAttribute('aria-pressed', String(stage === 'harbor'));
+  c.firstChild.textContent = STAGE_NAME.city; c.querySelector('small').textContent = J('ネオンの夜', 'Neon night');
+  h.firstChild.textContent = ok ? STAGE_NAME.harbor : '？？？';
+  h.querySelector('small').textContent = ok ? J('クレーンと船', 'Cranes & ships') : J('🔒 あと' + left + '回プレイ', '🔒 ' + left + ' more runs');
+  $('subT').textContent = stage === 'harbor' ? 'SUNSET HARBOR SWING' : 'NEON NIGHT SWING';
+  document.body.classList.toggle('harbor', stage === 'harbor');
+}
+$('stCity').addEventListener('click', () => pickStage('city'));
+$('stHarbor').addEventListener('click', () => pickStage('harbor'));
 // ---------- challenge & share ----------
 const GAME_URL = /\.github\.io$/.test(location.hostname) ? location.origin + location.pathname : 'https://kennyyossy.github.io/wire-ninja/';
 const MODE_LETTER = { normal: 'N', dopa: 'D', super: 'S', kyoku: 'K' };
@@ -1211,36 +1496,43 @@ function parseTok(t) {
   m = /^(\d{1,15})(?:e\+?(\d{1,16}))?$/i.exec(t); if (!m || !(+m[1] > 0)) return 0;
   return m[2] ? fromLg(Math.log10(+m[1]) + +m[2]) : +m[1];
 }
-function parseCode(t) { const m = /^\s*([NDSK])\s*-?\s*(L[\d.e+]+|\d{1,15}(?:e\+?\d{1,16})?)\s*$/i.exec(t || ''); if (!m) return null;
-  const sc = parseTok(m[2]); if (!nGt(sc, 0)) return null;
-  const mode = Object.keys(MODE_LETTER).find(k => MODE_LETTER[k] === m[1].toUpperCase()); return { mode, score: sc }; }
-function chalCode(m, sc) { return MODE_LETTER[m] + '-' + scoreTok(sc); }
+// a leading H marks the sunset harbor stage (HN-12345, HD-…)
+function parseCode(t) { const m = /^\s*(H?)([NDSK])\s*-?\s*(L[\d.e+]+|\d{1,15}(?:e\+?\d{1,16})?)\s*$/i.exec(t || ''); if (!m) return null;
+  const sc = parseTok(m[3]); if (!nGt(sc, 0)) return null;
+  const mode = Object.keys(MODE_LETTER).find(k => MODE_LETTER[k] === m[2].toUpperCase()); return { mode, score: sc, stage: m[1] ? 'harbor' : 'city' }; }
+function chalCode(m, sc) { return (world === 'harbor' ? 'H' : '') + MODE_LETTER[m] + '-' + scoreTok(sc); }
+const chalHere = () => !!challenge && challenge.mode === mode && (challenge.stage || 'city') === world && !tut;
 function readChallengeURL() {
   try { const q = new URLSearchParams(location.search || location.hash.replace(/^#/, '?'));
     const sc = parseTok(q.get('challenge')), m = q.get('mode') || 'normal';
-    if (nGt(sc, 0) && MODE_LETTER[m]) challenge = { mode: m, score: sc }; else if (q.get('c')) challenge = parseCode(q.get('c')); } catch (e) {}
+    if (nGt(sc, 0) && MODE_LETTER[m]) challenge = { mode: m, score: sc, stage: q.get('stage') === 'harbor' ? 'harbor' : 'city' }; else if (q.get('c')) challenge = parseCode(q.get('c')); } catch (e) {}
 }
 function modeLabel(m) { return MODE_NAME[m] || J('通常', 'Normal'); }
+// stage + mode for messages: "ドパガキ", "夕暮れの港", "夕暮れの港・ドパガキ"
+function playLabel(st, m) { return st === 'harbor' ? STAGE_NAME.harbor + (MODE_NAME[m] ? J('・', ' · ') + MODE_NAME[m] : '') : modeLabel(m); }
 function showChallenge() {
   $('chal').hidden = !challenge; if (!challenge) return;
+  const cst = challenge.stage || 'city';
+  if (!stageOpen(cst)) { giftStage(cst); showStages(); }
   if (!unlocked(challenge.mode)) { giftUnlock(challenge.mode); if (typeof showLocks === 'function') showLocks(); }
   const lockedTxt = unlocked(challenge.mode) ? '' : J('（このモードはまだ未解放）', ' (this mode is still locked)');
-  $('chalT').textContent = J('挑戦状：' + (unlocked(challenge.mode) ? modeLabel(challenge.mode) : '？？？') + 'で ' + fmtFit(challenge.score, 13) + ' pt を超えろ！',
-    'Challenge: beat ' + fmtFit(challenge.score, 13) + ' pt in ' + (unlocked(challenge.mode) ? modeLabel(challenge.mode) : '？？？') + '!') + lockedTxt;
+  const lbl = unlocked(challenge.mode) ? playLabel(cst, challenge.mode) : '？？？';
+  $('chalT').textContent = J('挑戦状：' + lbl + 'で ' + fmtFit(challenge.score, 13) + ' pt を超えろ！',
+    'Challenge: beat ' + fmtFit(challenge.score, 13) + ' pt in ' + lbl + '!') + lockedTxt;
 }
 function updateTarget() {
-  const el = $('target'); const on = !!challenge && challenge.mode === mode && !tut; el.hidden = !on; if (!on) return;
+  const el = $('target'); const on = chalHere(); el.hidden = !on; if (!on) return;
   const won = nGt(score, challenge.score);
   el.textContent = won ? J('挑戦クリア！', 'CHALLENGE BEATEN!') : J('目標 ', 'Target ') + fmtFit(challenge.score, 9);
   el.classList.toggle('won', won);
   if (won && !chalWon) { chalWon = true; pop(J('挑戦クリア！', 'CHALLENGE BEATEN!')); }
 }
 function shareText(sc) {
-  const name = mode === 'normal' ? '' : J('【' + modeLabel(mode) + '】', ' [' + modeLabel(mode) + ']');
+  const name = mode === 'normal' && world !== 'harbor' ? '' : J('【' + playLabel(world, mode) + '】', ' [' + playLabel(world, mode) + ']');
   return J('WIRE NINJA' + name + 'で ' + fmtFit(sc, 13) + ' pt 出した！これを超えられる？\n挑戦コード: ' + chalCode(mode, sc),
     'I scored ' + fmtFit(sc, 13) + ' pt in WIRE NINJA' + name + '! Can you beat it?\nChallenge code: ' + chalCode(mode, sc));
 }
-function shareURL(sc) { return GAME_URL + '?challenge=' + scoreTok(sc) + '&mode=' + mode; }
+function shareURL(sc) { return GAME_URL + '?challenge=' + scoreTok(sc) + '&mode=' + mode + (world === 'harbor' ? '&stage=harbor' : ''); }
 let lastScore = 0;
 function shareMsg(t) { $('shareMsg').textContent = t || ''; }
 function selectShare() { const ta = $('shareText'); ta.focus(); ta.select(); try { ta.setSelectionRange(0, ta.value.length); } catch (e) {} }
@@ -1264,7 +1556,7 @@ const acceptCode = () => { const c = parseCode($('codeIn').value); if (!c) { ret
 $('codeOk').addEventListener('click', acceptCode);
 $('codeIn').addEventListener('keydown', e => { if (e.key === 'Enter') acceptCode(); });
 $('chalX').addEventListener('click', () => { challenge = null; showChallenge(); });
-$('chalGo').addEventListener('click', () => { if (!challenge) return; if (challenge.mode === 'normal') { startGame('normal'); return; } tryMode(challenge.mode, J('挑戦スタート！', 'CHALLENGE ON!')); });
+$('chalGo').addEventListener('click', () => { if (!challenge) return; pickStage(challenge.stage || 'city'); if (challenge.mode === 'normal') { startGame('normal'); return; } tryMode(challenge.mode, J('挑戦スタート！', 'CHALLENGE ON!')); });
 readChallengeURL();
 const tryMode = (m, msg) => { if (!unlocked(m)) { retrigger($(MODE_BTN[m][0]), 'shake'); return; } startGame(m); pop(msg); };
 $('startDopa').addEventListener('click', () => tryMode('dopa', J('ドパガキモード！', 'DOPA KID MODE!')));
@@ -1273,8 +1565,11 @@ $('startKyoku').addEventListener('click', () => tryMode('kyoku', J('極ドパガ
 $('rulesBtn').addEventListener('click', () => { $('title').hidden = true; $('rules').hidden = false; });
 $('rulesClose').addEventListener('click', () => { $('rules').hidden = true; $('title').hidden = false; });
 // ---------- version & update history (newest first) ----------
-const VERSION = '1.1';
+const VERSION = '1.2';
 const CHANGELOG = [
+  { v: '1.2', date: '2026-11-25',
+    ja: ['新ステージ「夕暮れの港」を追加（どのモードでも合計10回遊ぶと解放、タイトルのメニュー上で選べる）', '港の建物は低め（高いビルなし）で、屋根つき倉庫・丸いタンク・L字ビル・段々ビル・コンテナなど形いろいろ', 'ゆっくり回るクレーン：先端にワイヤーを刺すと、刺したまま一緒に動く', '低く進む船：緑の甲板に着地すると休める（+500pt）。船は動き続けるので飛び立ちに注意', '船が通る水路は青い水で表示', 'ベスト記録はステージごとに保存。港の挑戦コードは H から始まる（例 HN-12345）'],
+    en: ['New stage: SUNSET HARBOR (unlocks after 10 runs in any mode; pick it at the top of the title menu)', 'Harbor buildings are low (no towers) and come in many shapes: gabled warehouses, round tanks, L-shaped and stepped buildings, container stacks', 'Slowly turning cranes: hook the tip and it carries your wire along', 'Low ships: land on the green deck to rest (+500pt). The ship keeps moving, so time your take-off', 'Ship lanes are shown as blue water', 'Best scores are kept per stage. Harbor challenge codes start with H (e.g. HN-12345)'] },
   { v: '1.1', date: '2026-11-24',
     ja: ['極ドパガキで得点が高すぎると「∞」になる不具合を修正', '10^300を超える得点も出せるように（巨大な数は 1.23×10⁴⁵⁶ や 10^(2.37×10²³) の形で表示）', '回転ジャンプの回転数の上限をなくした', '巨大な得点でもベスト記録・シェア・挑戦コードが使えるように', 'メニューにバージョンとアップデート履歴を追加'],
     en: ['Fixed scores turning into "∞" in MAX DOPA', 'Scores can now go beyond 10^300 (huge numbers show as 1.23×10⁴⁵⁶ or 10^(2.37×10²³))', 'No more limit on spin-jump rotations', 'Best scores, sharing and challenge codes work with huge scores', 'Version and update history added to the menu'] },
@@ -1296,7 +1591,7 @@ $('toTitle').addEventListener('click', () => toTitle());
 // practice mode: one lesson at a time, each clears when you do it; crashes just respawn you
 let tut = null;
 const NEAR_CATS = ['すれすれ', 'Wスレスレ', '地面すれすれ'];
-const BONUS_FEAT = { 'すれすれ': 'near', 'Wスレスレ': 'near', '地面すれすれ': 'near', 'アイテム': 'blue', '着地': 'roof', '回転ジャンプ': 'spin', 'バックフリップ': 'back', '橋くぐり': 'bridge', '橋に着地': 'bridge' };
+const BONUS_FEAT = { 'すれすれ': 'near', 'Wスレスレ': 'near', '地面すれすれ': 'near', 'アイテム': 'blue', '着地': 'roof', '船に着地': 'roof', '回転ジャンプ': 'spin', 'バックフリップ': 'back', '橋くぐり': 'bridge', '橋に着地': 'bridge' };
 // in the tutorial a mechanic (and its UI) only exists from the lesson that introduces it
 function feat(name) {
   if (!tut) return true;
@@ -1384,9 +1679,9 @@ function tutFinish() {
 }
 function tutEnd() { tut = null; $('tut').hidden = true; $('tutDone').hidden = true; $('tutReady').hidden = true; document.body.classList.remove('tutorial', 'no-combo'); }
 function startTutorial() {
-  startGame('normal'); tut = { i: 0, s: { v: 0 }, clear: 0 }; document.body.classList.add('tutorial'); tutSet(0);
+  startGame('normal'); setWorld('city'); tut = { i: 0, s: { v: 0 }, clear: 0 }; document.body.classList.add('tutorial'); tutSet(0);   // the tutorial always runs in the city
 }
-function toTitle() { tutEnd(); showBests(); $('over').hidden = true; reset(); state = 'title'; $('title').hidden = false; $('spin').hidden = true; $('feed').textContent = ''; }
+function toTitle() { tutEnd(); setWorld(stage); showBests(); $('over').hidden = true; reset(); state = 'title'; $('title').hidden = false; $('spin').hidden = true; $('feed').textContent = ''; }
 const tapBtn = (id, fn) => { const el = $(id); el.addEventListener('click', fn); for (const ev of ['touchstart', 'mousedown']) el.addEventListener(ev, e => e.stopPropagation()); };
 tapBtn('tutStart', startTutorial);
 tapBtn('tutSkip', () => { if (tut && !tut.clear) tutSet(tut.i + 1); });
@@ -1423,29 +1718,45 @@ $('jet').addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagat
 // ---------- physics ----------
 function roofUnder(x, z) {
   const ci = Math.round(x / CELL), cj = Math.round(z / CELL);
+  let top = null;                                           // the highest part under you (harbor buildings have several)
   for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
-    const b = cell(i, j);
-    if (b && x > b.minx - 0.5 && x < b.maxx + 0.5 && z > b.minz - 0.5 && z < b.maxz + 0.5) return b;
+    for (const b of partsOf(cell(i, j))) if (x > b.minx - 0.5 && x < b.maxx + 0.5 && z > b.minz - 0.5 && z < b.maxz + 0.5 && (!top || b.h > top.h)) top = b;
   }
+  if (top) return top;
   // bridges are landable too
   for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
     const br = bridge(i, j);
     if (br && x > br.minx && x < br.maxx && z > br.minz && z < br.maxz) return br;
   }
+  // ...and so are ships (the bridge house sits higher than the deck)
+  for (const s of ships) {
+    if (x > s.cab.minx - 0.5 && x < s.cab.maxx + 0.5 && z > s.cab.minz - 0.5 && z < s.cab.maxz + 0.5) return s.cab;   // same 0.5 m margin as the crash check
+    if (x > s.hull.minx - 0.5 && x < s.hull.maxx + 0.5 && z > s.hull.minz - 0.5 && z < s.hull.maxz + 0.5) return s.hull;
+  }
   return null;
 }
 function collide() {
-  if (pos.y < 0.9) return '地面に落下';
+  if (pos.y < 0.9) return world === 'harbor' ? '海に落下' : '地面に落下';
   const ci = Math.round(pos.x / CELL), cj = Math.round(pos.z / CELL);
   for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
-    const b = cell(i, j); if (!b) continue;
-    if (pos.x > b.minx - 0.5 && pos.x < b.maxx + 0.5 && pos.z > b.minz - 0.5 && pos.z < b.maxz + 0.5 && pos.y < b.h + 0.9)
-      return 'ビルに激突';
+    for (const b of partsOf(cell(i, j)))
+      if (pos.x > b.minx - 0.5 && pos.x < b.maxx + 0.5 && pos.z > b.minz - 0.5 && pos.z < b.maxz + 0.5 && pos.y < b.h + 0.9) return 'ビルに激突';
   }
   let hitBr = null; nearBridges(br => { if (boxDist(br) < 0.5) hitBr = '橋に激突'; });
+  if (world === 'harbor') {
+    for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
+      const c = crane(i, j);
+      if (c && pos.x > c.minx - 0.5 && pos.x < c.maxx + 0.5 && pos.z > c.minz - 0.5 && pos.z < c.maxz + 0.5 && pos.y < c.h + 0.9) return 'クレーンに激突';
+    }
+    for (const s of ships) {
+      if (onRoof && onRoof.ship === s) continue;              // the ship you are standing on
+      for (const b of [s.hull, s.cab]) if (pos.x > b.minx - 0.5 && pos.x < b.maxx + 0.5 && pos.z > b.minz - 0.5 && pos.z < b.maxz + 0.5 && pos.y < b.h + 0.9) return '船に激突';
+    }
+  }
   return hitBr;
 }
 function step(dt) {
+  wT += dt; if (world === 'harbor') updateShips(pos.x, pos.z);
   const attached = ropes.L.on || ropes.R.on;
   vel.y -= P.G * dt;
   if (attached) {
@@ -1457,7 +1768,7 @@ function step(dt) {
   }
   // keep moving forward
   const hs = Math.hypot(vel.x, vel.z);
-  if (hs < P.MINSPD) { vel.x += heading.x * (P.MINSPD - hs) * 2 * dt; vel.z += heading.z * (P.MINSPD - hs) * 2 * dt; }
+  if (hs < P.MINSPD && !(onRoof && onRoof.isShip)) { vel.x += heading.x * (P.MINSPD - hs) * 2 * dt; vel.z += heading.z * (P.MINSPD - hs) * 2 * dt; }
   const prevY = pos.y, prevX = pos.x, prevZ = pos.z;
   pos.addScaledVector(vel, dt);
   const hd = Math.hypot(vel.x, vel.z) * dt; pathDist += hd; score = nAdd(score, hd * 10); stats.distPts += hd * 10;
@@ -1480,6 +1791,7 @@ function step(dt) {
     const r = ropes[s]; if (!r.on) continue;
     r.t = (r.t || 0) + dt;
     if (r.t >= WIRE_LIFE) { snapWire(s); continue; }
+    if (r.crane) { craneTip(r.crane, r.anchor); r.pivot.copy(r.anchor).add(r.cOff); }   // hanging from a turning crane
     tmp.subVectors(pos, r.pivot); const l = tmp.length();
     r.len = Math.max(8, Math.min(r.len, l) - REEL * dt);   // winch keeps the line taut
     if (r.reelReq > 0) {
@@ -1505,10 +1817,23 @@ function step(dt) {
   // rooftops: land from above, run, then jump off the edge
   const roof = roofUnder(pos.x, pos.z);
   if (roof && vel.y <= 0 && prevY >= roof.h + FOOT - 0.05 && pos.y < roof.h + FOOT) {
-    if (!onRoof) { endFlip(); if (roof.isBridge) bonus(1000, '橋に着地', true); else bonus(100, '着地'); }
+    if (!onRoof) { endFlip();
+      if (roof.isBridge) bonus(1000, '橋に着地', true);
+      else if (roof.isShip) { if (roof.ship !== lastShip) { lastShip = roof.ship; bonus(500, '船に着地', true); } }
+      else bonus(100, '着地'); }
     pos.y = roof.h + FOOT; vel.y = 0; onRoof = roof;
-    const h = Math.hypot(vel.x, vel.z), k = 1 - Math.exp(-2.5 * dt), target = h + (RUN_SPEED - h) * k;
-    if (h > 0.1) { vel.x *= target / h; vel.z *= target / h; }
+    if (roof.isShip) {                                        // ride the ship: slow walk relative to the moving deck
+      const sv = roof.ship.vx; let rx = vel.x - sv, rz = vel.z;
+      const h = Math.hypot(rx, rz), k = 1 - Math.exp(-3 * dt), target = h + (SHIP_WALK - h) * k;
+      if (h > 0.1) { rx *= target / h; rz *= target / h; } else { rx = heading.x * target; rz = heading.z * target; }
+      vel.x = sv + rx; vel.z = rz;
+    } else {
+      const h = Math.hypot(vel.x, vel.z), k = 1 - Math.exp(-2.5 * dt), target = h + (RUN_SPEED - h) * k;
+      if (h > 0.1) { vel.x *= target / h; vel.z *= target / h; }
+    }
+  } else if (onRoof && roof && roof !== onRoof && pos.y < roof.h + FOOT &&
+             ((onRoof.isShip && roof.cab && !onRoof.cab && roof.ship === onRoof.ship) || (!onRoof.isShip && !roof.isShip && roof.h - onRoof.h <= 4.5))) {
+    pos.y = roof.h + FOOT; vel.y = 0; onRoof = roof;          // walked into a slightly higher part (warehouse ridge, ship's bridge house): step up onto it
   } else if (onRoof && roof !== onRoof) {
     onRoof = null;
     if (!ropes.L.on && !ropes.R.on) vel.y = JUMP_V;
@@ -1537,13 +1862,15 @@ function nearMiss(dt) {
   rightV.set(-heading.z, 0, heading.x);
   let single = null, leftB = null, rightB = null;
   for (let i = ci - 1; i <= ci + 1; i++) for (let j = cj - 1; j <= cj + 1; j++) {
-    const b = cell(i, j); if (!b || pos.y > b.h + 0.9) continue;
+    for (const b of partsOf(cell(i, j))) {
+    if (pos.y > b.h + 0.9) continue;
     const nx = Math.min(Math.max(pos.x, b.minx), b.maxx), nz = Math.min(Math.max(pos.z, b.minz), b.maxz);
     const d = Math.hypot(nx - pos.x, nz - pos.z);
     if (d <= 0.5 || d >= W_NEAR) continue;
     const side = (nx - pos.x) * rightV.x + (nz - pos.z) * rightV.z;   // >0 building on the right
     if (side > 0.3) rightB = b; else if (side < -0.3) leftB = b;
     if (d < 3 && !single) single = b;
+    }
   }
   nearBridges(br => { const d = boxDist(br); if (d > 0.5 && d < 3 && !single) single = br; });   // skimming a bridge counts too
   if (leftB) wL = time; if (rightB) wR = time;
@@ -1588,6 +1915,7 @@ function frame(now) {
   }
   for (const s of ['L', 'R']) { const m = ropes[s].mark; if (m.visible) { m.rotation.y += dt * 3; m.scale.setScalar(1 + 0.15 * Math.sin(now / 120)); } }
 
+  if (world === 'harbor') { if (state !== 'play' && !paused) { wT += dt; updateShips(pos.x, pos.z); } drawMovers(); }
   drawItems(now); updateTint(dt);
   // ropes
   for (const s of ['L', 'R']) {
@@ -1638,6 +1966,7 @@ function frame(now) {
   if (state !== 'over') camera.position.lerp(camTarget, 1 - Math.exp(-7 * dt));
   camera.lookAt(look.copy(pos).addScaledVector(camHead, 9).add(tmp.set(0, 0.5, 0)));
   if (shakeT > 0) { shakeT = Math.max(0, shakeT - dt); const a = shakeT * 0.6; /* gentler shake */ camera.position.x += (Math.random() - 0.5) * a; camera.position.y += (Math.random() - 0.5) * a; camera.rotation.z += (Math.random() - 0.5) * a * 0.05; }
+  placeSky();
   updateJet(dt, now, paused);
   updateSparks(dt);
   if (spinHide > 0) { spinHide -= dt; if (spinHide <= 0) $('spin').hidden = true; }
@@ -1650,7 +1979,7 @@ function frame(now) {
     $('score').textContent = fmtFit(nFloor(score), 13); if (challenge) updateTarget();
     $('dist').textContent = Math.floor(pathDist);
     $('spd').textContent = Math.round(sp * 3.6);
-    $('warn').style.opacity = pos.y < 12 ? (Math.sin(now / 80) > 0 ? 1 : 0.3) : 0;
+    $('warn').style.opacity = pos.y < (world === 'harbor' ? 9 : 12) && !onRoof ? (Math.sin(now / 80) > 0 ? 1 : 0.3) : 0;
   } else $('warn').style.opacity = 0;
   updateCombo(dt, paused);
   if (popT > 0) { popT -= dt; if (popT <= 0) $('pop').style.opacity = 0; }
@@ -1683,11 +2012,12 @@ function frame(now) {
   }
   renderer.render(scene, camera);
 }
+setWorld(stage); showBests();
 reset();
 requestAnimationFrame(frame);
 
 // test hook
-window.__wc = { renderer, step, findAnchor, attach, detach, rebuildCity, heading, get state() { return state; }, set state(v) { state = v; }, pos, vel, ropes, held, setHeld, startGame, P, get dist() { return maxDist; }, get score() { return score; }, get flip() { return flip; }, get onRoof() { return onRoof; }, fireJet, get jetCD() { return jetCD; }, activeItems, bridge, get tut() { return tut; }, startTutorial, get challenge() { return challenge; }, set challenge(v) { challenge = v; }, setLang: l => { lang = l; applyLang(); } };
+window.__wc = { renderer, camera, step, findAnchor, attach, detach, rebuildCity, heading, get state() { return state; }, set state(v) { state = v; }, pos, vel, ropes, held, setHeld, startGame, P, get dist() { return maxDist; }, get score() { return score; }, get flip() { return flip; }, get onRoof() { return onRoof; }, fireJet, get jetCD() { return jetCD; }, activeItems, bridge, get tut() { return tut; }, startTutorial, get challenge() { return challenge; }, set challenge(v) { challenge = v; }, setLang: l => { lang = l; applyLang(); }, pickStage, get world() { return world; }, get stage() { return stage; }, ships, craneList, crane, get wT() { return wT; }, roofUnder, get plays() { return plays; } };
 })();
 </script>
 </body>
